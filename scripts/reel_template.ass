@@ -1,0 +1,22 @@
+[Script Info]
+Title: JSON Reel
+ScriptType: v4.00+
+PlayResX: 696
+PlayResY: 1280
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.709
+
+[V4+ Styles]
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Title,{font},{title_font_size},{text_color_ass},&H000000FF,{outline_color_ass},&H00000000,1,0,0,0,100,100,0,0,1,1.9,0,8,34,34,{header_margin_v},1
+Style: BodyWhite,{font},{body_font_size},{text_color_ass},&H000000FF,{outline_color_ass},&H00000000,0,0,0,0,100,118,0,0,1,1.5,0,7,{body_margin_l},{body_margin_r},{body_margin_v},1
+Style: BodyOrange,{font},{body_font_size},{highlight_color_ass},&H000000FF,{outline_color_ass},&H00000000,1,0,0,0,100,118,0,0,1,1.5,0,7,{body_margin_l},{body_margin_r},{body_margin_v},1
+Style: CTA,{font},{cta_font_size},{text_color_ass},&H000000FF,{outline_color_ass},&H00000000,1,0,0,0,100,100,0,0,1,1.5,0,8,40,40,235,1
+Style: CTAOrange,{font},{cta_font_size},{highlight_color_ass},&H000000FF,{outline_color_ass},&H00000000,1,0,0,0,100,100,0,0,1,1.5,0,8,40,40,235,1
+
+[Events]
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+Dialogue: 0,0:00:00.00,{end_time},Title,,0,0,0,,{heading}
+Dialogue: 0,0:00:00.00,{end_time},BodyWhite,,0,0,0,,{body_text}
+Dialogue: 1,0:00:00.00,{end_time},CTA,,0,0,0,,{{\an8\pos({cta_x},{cta_y})}}{cta_text}

@@ -1,0 +1,25 @@
+﻿page_key: female_psychology
+style_preset: default_style
+
+video:
+  duration_sec: 15
+  resolution: "696x1280"
+  fps: 30
+  background: "black"
+
+assets:
+  logo_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/female_psychology/assets/logo/logo1.png"
+  audio_dir: "pages/female_psychology/assets/music"
+  audio_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/female_psychology/assets/music/bg.mp3"
+
+content:
+  provider: excel
+  xlsx_path: "pages/female_psychology/content/reel_content_bank.xlsx"
+  sheet_name: "content_pool"
+  batch_size: 5
+
+render:
+  background_video_dir: "pages/female_psychology/assets/backgrounds/video"
+  background_video: "pages/female_psychology/assets/backgrounds/video/bg1_unsharp_okay.mp4"
+  dark_overlay: 0.50
+

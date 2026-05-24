@@ -1,0 +1,17 @@
+style:
+  font: "Comic Sans MS"
+  title_font_size: 45
+  body_font_size: 33
+  cta_font_size: 33
+  highlight_color_ass: "&H001C8DFF"
+  text_color_ass: "&H00FFFFFF"
+  outline_color_ass: "&H00101010"
+  header_margin_v: 128
+  body_margin_v: 300
+  body_margin_l: 88
+  body_margin_r: 64
+  point_gap_scale: 1.2
+  cta_pos: [348, 1025]
+  logo_scale_width: 165
+  logo_margin_right: 26
+  logo_margin_bottom: 20

@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Env / secrets
+.env
+secrets/
+
+# Generated outputs
+runs/
+logs/
+output/
+archive/
+
+# OS/editor
+.DS_Store
+Thumbs.db
