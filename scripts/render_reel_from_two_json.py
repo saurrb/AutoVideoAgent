@@ -4,7 +4,7 @@ import subprocess
 import textwrap
 from pathlib import Path
 
-FFMPEG = Path(r"C:\Users\Saurabh\Documents\AutoVideoAgent\old_videoAgent\tools\ffmpeg\ffmpeg-8.1.1-essentials_build\bin\ffmpeg.exe")
+FFMPEG = Path(r"C:\Users\Saurabh\Documents\AutoVideoAgent\tools\ffmpeg\ffmpeg-8.1.1-essentials_build\bin\ffmpeg.exe")
 
 
 def ass_escape(s: str) -> str:

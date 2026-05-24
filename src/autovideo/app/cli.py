@@ -14,7 +14,7 @@ from autovideo.services.video_renderer import render_reel
 
 
 def _default_ffmpeg(project_root: Path) -> Path:
-    return project_root / "old_videoAgent" / "tools" / "ffmpeg" / "ffmpeg-8.1.1-essentials_build" / "bin" / "ffmpeg.exe"
+    return project_root / "tools" / "ffmpeg" / "ffmpeg-8.1.1-essentials_build" / "bin" / "ffmpeg.exe"
 
 
 def _resolve_state_db_path(project_root: Path, page_key: str) -> Path:

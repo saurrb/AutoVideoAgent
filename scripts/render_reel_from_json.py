@@ -4,7 +4,7 @@ import subprocess
 import textwrap
 from pathlib import Path
 
-FFMPEG = Path(r"C:\Users\Saurabh\Documents\AutoVideoAgent\old_videoAgent\tools\ffmpeg\ffmpeg-8.1.1-essentials_build\bin\ffmpeg.exe")
+FFMPEG = Path(r"C:\Users\Saurabh\Documents\AutoVideoAgent\tools\ffmpeg\ffmpeg-8.1.1-essentials_build\bin\ffmpeg.exe")
 ASS_TEMPLATE = Path(__file__).with_name("reel_template.ass")
 DEFAULT_BODY_MARGIN_L = 88
 DEFAULT_BODY_MARGIN_R = 64
