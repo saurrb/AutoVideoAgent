@@ -58,7 +58,7 @@ def take_next_batch_from_excel(
     ws = wb[sheet_name]
     header = [c.value for c in ws[1]]
     idx = {name: i + 1 for i, name in enumerate(header)}
-    required = [
+    old_schema = [
         "id",
         "heading_line1",
         "heading_line2",
@@ -67,30 +67,55 @@ def take_next_batch_from_excel(
         "cta",
         "used",
     ]
-    for key in required:
-        if key not in idx:
-            raise ValueError(f"Missing required column '{key}' in {xlsx_path}")
+    new_schema = ["Number", "Heading", "Hook", "Reason", "used"]
+    has_old_schema = all(k in idx for k in old_schema)
+    has_new_schema = all(k in idx for k in new_schema)
+    if not has_old_schema and not has_new_schema:
+        raise ValueError(
+            f"Unsupported columns in {xlsx_path}. "
+            f"Need either {old_schema} or {new_schema}."
+        )
 
     candidates: list[dict] = []
     for r in range(2, ws.max_row + 1):
-        item_id = int(_cell(ws.cell(r, idx["id"]).value, 0))
+        if has_new_schema:
+            item_id = int(_cell(ws.cell(r, idx["Number"]).value, 0))
+        else:
+            item_id = int(_cell(ws.cell(r, idx["id"]).value, 0))
         if item_id <= 0:
             continue
         excel_used = int(_cell(ws.cell(r, idx["used"]).value, 0)) == 1
         db_used = _already_used(conn, page_key, item_id)
         if excel_used or db_used:
             continue
-        candidates.append(
-            {
-                "row_num": r,
-                "id": item_id,
-                "heading_line1": str(_cell(ws.cell(r, idx["heading_line1"]).value)).strip(),
-                "heading_line2": str(_cell(ws.cell(r, idx["heading_line2"]).value)).strip(),
-                "point_text": str(_cell(ws.cell(r, idx["point_text"]).value)).strip(),
-                "highlight_first_words": int(_cell(ws.cell(r, idx["highlight_first_words"]).value, 3)),
-                "cta": str(_cell(ws.cell(r, idx["cta"]).value)).strip(),
-            }
-        )
+        if has_new_schema:
+            heading = str(_cell(ws.cell(r, idx["Heading"]).value)).strip()
+            hook = str(_cell(ws.cell(r, idx["Hook"]).value)).strip()
+            reason = str(_cell(ws.cell(r, idx["Reason"]).value)).strip()
+            point_text = f"{hook}||{reason}" if reason else hook
+            candidates.append(
+                {
+                    "row_num": r,
+                    "id": item_id,
+                    "heading_line1": "DAILY DESIRE FACTS",
+                    "heading_line2": heading or "DESIRE FACT",
+                    "point_text": point_text,
+                    "highlight_first_words": 3,
+                    "cta": "",
+                }
+            )
+        else:
+            candidates.append(
+                {
+                    "row_num": r,
+                    "id": item_id,
+                    "heading_line1": str(_cell(ws.cell(r, idx["heading_line1"]).value)).strip(),
+                    "heading_line2": str(_cell(ws.cell(r, idx["heading_line2"]).value)).strip(),
+                    "point_text": str(_cell(ws.cell(r, idx["point_text"]).value)).strip(),
+                    "highlight_first_words": int(_cell(ws.cell(r, idx["highlight_first_words"]).value, 3)),
+                    "cta": str(_cell(ws.cell(r, idx["cta"]).value)).strip(),
+                }
+            )
         if len(candidates) == batch_size:
             break
 

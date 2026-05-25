@@ -72,6 +72,20 @@ def _build_reel_spec(page_key: str, cfg: dict, batch) -> ReelSpec:
 
 def _resolve_background_video(project_root: Path, cfg: dict) -> Path:
     render_cfg = cfg.get("render", {})
+    bg_img_dir_rel = render_cfg.get("background_image_dir", "")
+    if bg_img_dir_rel:
+        bg_img_dir = (project_root / bg_img_dir_rel).resolve()
+        if bg_img_dir.exists() and bg_img_dir.is_dir():
+            candidates = sorted(
+                [
+                    p
+                    for p in bg_img_dir.iterdir()
+                    if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
+                ]
+            )
+            if candidates:
+                return random.choice(candidates)
+
     bg_dir_rel = render_cfg.get("background_video_dir", "")
     if bg_dir_rel:
         bg_dir = (project_root / bg_dir_rel).resolve()

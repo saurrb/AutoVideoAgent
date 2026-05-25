@@ -36,7 +36,75 @@ def _build_point_line(text: str, n_highlight: int) -> str:
     return base
 
 
+def _build_daily_desire_fact_ass(spec: ReelSpec) -> str:
+    end_time = _ass_time_from_seconds(spec.duration_sec)
+    badge_text = _ass_escape(spec.heading_line2 or "DESIRE FACT")
+    raw = spec.points[0].text.strip() if spec.points else ""
+
+    def _split_hook_answer(text: str) -> tuple[str, str]:
+        if "||" in text:
+            hook, answer = text.split("||", 1)
+            return hook.strip(), answer.strip()
+        lowered = text.lower()
+        for marker in [" because ", " when ", " so ", " but "]:
+            pos = lowered.find(marker)
+            if pos > 0:
+                hook = text[: pos + len(marker)].strip()
+                answer = text[pos + len(marker) :].strip()
+                return hook, answer
+        words = text.split()
+        if len(words) > 7:
+            return " ".join(words[:7]).strip(), " ".join(words[7:]).strip()
+        return text.strip(), text.strip()
+
+    hook, answer = _split_hook_answer(raw)
+    hook = hook.rstrip(".!?")
+    if not hook.endswith("..."):
+        hook += "..."
+    if not answer:
+        answer = raw
+
+    body1 = r"\N".join(_wrap_line(_ass_escape(hook), width=24))
+    body2 = r"\N".join(_wrap_line(_ass_escape(answer), width=24))
+
+    hook_end = 6.0
+    reveal_start = 6.8
+    reveal_end = min(float(spec.duration_sec), reveal_start + 3.2)
+    card_events = [
+        ("0:00:00.00", _ass_time_from_seconds(hook_end), body1),
+        (_ass_time_from_seconds(reveal_start), _ass_time_from_seconds(reveal_end), body2),
+    ]
+    card_font_size = max(56, int(round(float(spec.body_font_size) * 1.35)))
+
+    lines = [
+        "[Script Info]",
+        "Title: Daily Desire Facts Style",
+        "ScriptType: v4.00+",
+        "PlayResX: 696",
+        "PlayResY: 1280",
+        "WrapStyle: 0",
+        "ScaledBorderAndShadow: yes",
+        "YCbCr Matrix: TV.709",
+        "",
+        "[V4+ Styles]",
+        "Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding",
+        f"Style: Badge,{spec.font},{card_font_size},&H00FFFFFF,&H000000FF,&H00000000,&H90000000,1,0,0,0,100,100,0,0,3,0,0,8,0,0,92,1",
+        f"Style: Card,{spec.font},{card_font_size},&H00FFFFFF,&H000000FF,&H00000000,&H99000000,1,0,0,0,100,100,0,0,3,0,0,5,112,112,0,1",
+        "",
+        "[Events]",
+        "Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text",
+        f"Dialogue: 2,0:00:00.00,{end_time},Badge,,0,0,0,,{badge_text}",
+    ]
+    for start, end, txt in card_events:
+        if txt:
+            lines.append(f"Dialogue: 1,{start},{end},Card,,0,0,0,,{txt}")
+    return "\n".join(lines) + "\n"
+
+
 def build_ass(template_path: Path, spec: ReelSpec) -> str:
+    if spec.page_key == "daily_desire_facts":
+        return _build_daily_desire_fact_ass(spec)
+
     heading = r"\N".join([_ass_escape(spec.heading_line1), _ass_escape(spec.heading_line2)])
     end_time = _ass_time_from_seconds(spec.duration_sec)
 

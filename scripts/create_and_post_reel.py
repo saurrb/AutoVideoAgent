@@ -16,7 +16,7 @@ import requests
 GRAPH_DEFAULT = "v24.0"
 
 
-HASHTAG_POOL = [
+DEFAULT_HASHTAG_POOL = [
     "#femalepsychology",
     "#datingtips",
     "#relationshipadvice",
@@ -65,6 +65,35 @@ HASHTAG_POOL = [
     "#denver",
     "#austin",
 ]
+PAGE_HASHTAG_POOLS = {
+    "daily_desire_facts": [
+        "#dailydesirefacts",
+        "#relationshipfacts",
+        "#attractionfacts",
+        "#datingfacts",
+        "#lovefacts",
+        "#girlfacts",
+        "#guyfacts",
+        "#psychologyfacts",
+        "#modernrelationships",
+        "#emotionalattraction",
+        "#confidence",
+        "#communication",
+        "#datingtips",
+        "#relationshipadvice",
+        "#usa",
+        "#unitedstates",
+        "#newyork",
+        "#california",
+        "#texas",
+        "#florida",
+        "#chicago",
+        "#losangeles",
+        "#miami",
+        "#dallas",
+        "#houston",
+    ],
+}
 STOP_TAG_WORDS = {
     "with",
     "from",
@@ -133,13 +162,19 @@ def _slug_words(text: str) -> list[str]:
     return [w for w in cleaned.split() if len(w) > 2]
 
 
-def build_caption(manifest: dict[str, Any], hashtag_count: int = 7) -> str:
+def _load_hashtag_pool(project_root: Path, page_key: str) -> list[str]:
+    tag_file = project_root / "pages" / page_key / "content" / "high_rpm_hashtags.txt"
+    if tag_file.exists():
+        lines = [x.strip() for x in tag_file.read_text(encoding="utf-8").splitlines()]
+        tags = [x if x.startswith("#") else f"#{x}" for x in lines if x and not x.startswith("//")]
+        if tags:
+            return list(dict.fromkeys(tags))
+    return PAGE_HASHTAG_POOLS.get(page_key, DEFAULT_HASHTAG_POOL)
+
+
+def build_caption(manifest: dict[str, Any], project_root: Path, hashtag_count: int = 5) -> str:
     spec = manifest.get("spec", {})
-    h1 = str(spec.get("heading_line1", "")).strip().title()
-    h2 = str(spec.get("heading_line2", "")).strip().title()
-    # Safety normalization in case any legacy content still has misspelling.
-    h1 = h1.replace("Psycology", "Psychology")
-    h2 = h2.replace("Psycology", "Psychology")
+    page_key = str(spec.get("page_key", "")).strip().lower()
     points = spec.get("points", [])
 
     lead = ""
@@ -147,15 +182,18 @@ def build_caption(manifest: dict[str, Any], hashtag_count: int = 7) -> str:
         lead = str(points[0].get("text", "")).strip()
     if not lead:
         lead = "Strong women choose calm consistency, not chaos."
+    if "||" in lead:
+        hook, _ = lead.split("||", 1)
+        lead = hook.strip()
 
     lead = re.sub(r"\s+", " ", lead)
     if len(lead) > 120:
         lead = lead[:117].rstrip() + "..."
 
-    opener = f"{h1}: {h2}." if h1 and h2 else "Female Psychology insights."
-    sentence = f"{opener} {lead}"
+    sentence = lead
 
-    pool = list(dict.fromkeys(HASHTAG_POOL))
+    hashtag_pool = _load_hashtag_pool(project_root, page_key)
+    pool = list(dict.fromkeys(hashtag_pool))
     random.shuffle(pool)
     selected = []
     for tag in pool:
@@ -263,6 +301,10 @@ def main() -> None:
     args = build_parser().parse_args()
     project_root = Path(args.project_root).resolve()
     meta_config_path = (project_root / args.meta_config).resolve()
+    if args.meta_config == "secrets/meta_config.json":
+        page_meta = (project_root / "secrets" / "pages" / args.page / "meta_config.json").resolve()
+        if page_meta.exists():
+            meta_config_path = page_meta
 
     manifest_path, manifest = _run_render(project_root, args.page)
     output_mp4 = Path(manifest["output_mp4"]).resolve()
@@ -270,7 +312,7 @@ def main() -> None:
     if args.caption_file:
         caption = Path(args.caption_file).read_text(encoding="utf-8").strip()
     else:
-        caption = build_caption(manifest, hashtag_count=7)
+        caption = build_caption(manifest, project_root=project_root, hashtag_count=5)
 
     caption_out = manifest_path.with_suffix(".caption.txt")
     caption_out.write_text(caption + "\n", encoding="utf-8")

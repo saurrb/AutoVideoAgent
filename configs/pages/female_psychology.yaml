@@ -21,5 +21,5 @@ content:
 render:
   background_video_dir: "pages/female_psychology/assets/backgrounds/video"
   background_video: "pages/female_psychology/assets/backgrounds/video/bg1_unsharp_okay.mp4"
-  dark_overlay: 0.50
+  dark_overlay: 0.30
 
