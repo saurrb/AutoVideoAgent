@@ -1,0 +1,85 @@
+{
+  "generated_from": "C:\\Users\\Saurabh\\Documents\\AutoVideoAgent\\control\\page_automation_control.xlsx",
+  "pages": [
+    {
+      "page_key": "female_psychology",
+      "enabled": true,
+      "mode": "ui_schedule",
+      "facebook_asset_id": "1188413461011838",
+      "generator_type": "text_overlay",
+      "content_source_file": "pages/female_psychology/content/reel_content_bank.xlsx",
+      "logo_file": "pages/female_psychology/assets/logo/logo1.png",
+      "timezone": "Asia/Calcutta",
+      "morning_run_time": "08:50",
+      "schedule_horizon_days": 1,
+      "posting_slots": [
+        "10:30",
+        "12:30",
+        "14:30",
+        "16:30",
+        "18:30",
+        "20:30",
+        "22:30"
+      ]
+    },
+    {
+      "page_key": "daily_desire_facts",
+      "enabled": true,
+      "mode": "ui_schedule",
+      "facebook_asset_id": "1094526903751124",
+      "generator_type": "text_overlay",
+      "content_source_file": "pages/daily_desire_facts/content/reel_content_bank.xlsx",
+      "logo_file": "pages/daily_desire_facts/assets/logo/logo1.png",
+      "timezone": "Asia/Calcutta",
+      "morning_run_time": "09:15",
+      "schedule_horizon_days": 1,
+      "posting_slots": [
+        "10:30",
+        "12:30",
+        "14:30",
+        "16:30",
+        "18:30",
+        "20:30",
+        "22:30"
+      ]
+    },
+    {
+      "page_key": "dragon_cinema",
+      "enabled": true,
+      "mode": "ui_schedule",
+      "facebook_asset_id": "1942710539310781",
+      "generator_type": "dragon_chain",
+      "content_source_file": "pages/dragon_cinema/content/dragon_scenes.xlsx",
+      "logo_file": "pages/dragon_cinema/assets/logo/logo1.png",
+      "timezone": "Asia/Calcutta",
+      "morning_run_time": "09:40",
+      "schedule_horizon_days": 1,
+      "posting_slots": [
+        "09:00",
+        "11:00",
+        "13:00",
+        "15:00",
+        "17:00",
+        "19:00",
+        "21:00",
+        "23:00"
+      ]
+    }
+  ],
+  "job": {
+    "job_key": "daily_ui_batch",
+    "enabled": true,
+    "run_time": "09:00",
+    "run_days": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun"
+    ],
+    "scope": "all_enabled_pages",
+    "action": "generate_and_schedule"
+  }
+}

@@ -1,11 +1,11 @@
-page_key: daily_desire_facts
+﻿page_key: daily_desire_facts
 style_preset: default_style
 style:
   font: "Corbel"
 
 video:
   duration_sec: 10
-  resolution: "696x1280"
+  resolution: "720x1280"
   fps: 30
   background: "black"
 
@@ -15,13 +15,15 @@ assets:
   audio_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/daily_desire_facts/assets/music/bg.mp3"
 
 content:
-  provider: excel
+  provider: db
   xlsx_path: "pages/daily_desire_facts/content/reel_content_bank.xlsx"
   sheet_name: "content_pool"
   batch_size: 1
 
 render:
-  background_image_dir: "pages/daily_desire_facts/assets/backgrounds/images"
+  background_image_dir: "pages/daily_desire_facts/assets/backgrounds/generated"
   background_video_dir: "pages/daily_desire_facts/assets/backgrounds/video"
   background_video: "pages/daily_desire_facts/assets/backgrounds/video/bg1_unsharp_okay.mp4"
-  dark_overlay: 0.50
+  dark_overlay: 0.10
+  use_scene_prompt_grok: true
+  require_scene_prompt_grok: true

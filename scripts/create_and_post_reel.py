@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import requests
+from openpyxl import load_workbook
 
 GRAPH_DEFAULT = "v24.0"
 
@@ -171,8 +172,57 @@ def _load_hashtag_pool(project_root: Path, page_key: str) -> list[str]:
             return list(dict.fromkeys(tags))
     return PAGE_HASHTAG_POOLS.get(page_key, DEFAULT_HASHTAG_POOL)
 
+def _caption_from_excel(manifest: dict[str, Any], project_root: Path) -> str:
+    spec = manifest.get("spec", {})
+    page_key = str(spec.get("page_key", "")).strip().lower()
+    if page_key != "daily_desire_facts":
+        return ""
+
+    points = spec.get("points", [])
+    if not points:
+        return ""
+    row_id = points[0].get("source_item_id")
+    if row_id is None:
+        return ""
+
+    xlsx = project_root / "pages" / "daily_desire_facts" / "content" / "reel_content_bank.xlsx"
+    if not xlsx.exists():
+        return ""
+
+    wb = load_workbook(xlsx, data_only=True)
+    sheet = wb["content_pool"] if "content_pool" in wb.sheetnames else wb[wb.sheetnames[0]]
+    headers = [str(sheet.cell(1, c).value or "").strip().lower() for c in range(1, sheet.max_column + 1)]
+    idx = {h: i + 1 for i, h in enumerate(headers) if h}
+    num_col = idx.get("number")
+    cap_col = idx.get("caption")
+    tag_col = idx.get("hashtags")
+    if not num_col or not cap_col:
+        return ""
+
+    caption = ""
+    hashtags = ""
+    for r in range(2, sheet.max_row + 1):
+        val = sheet.cell(r, num_col).value
+        try:
+            current_id = int(val)
+        except Exception:
+            continue
+        if current_id == int(row_id):
+            caption = str(sheet.cell(r, cap_col).value or "").strip()
+            if tag_col:
+                hashtags = str(sheet.cell(r, tag_col).value or "").strip()
+            break
+
+    if not caption:
+        return ""
+    return f"{caption}\n\n{hashtags}".strip() if hashtags else caption
+
 
 def build_caption(manifest: dict[str, Any], project_root: Path, hashtag_count: int = 5) -> str:
+    excel_caption = _caption_from_excel(manifest, project_root)
+    if excel_caption:
+        return excel_caption
+
     spec = manifest.get("spec", {})
     page_key = str(spec.get("page_key", "")).strip().lower()
     points = spec.get("points", [])
@@ -255,6 +305,7 @@ def upload_binary(upload_url: str, access_token: str, video_path: Path) -> None:
 def wait_for_facebook_video(version: str, video_id: str, access_token: str, timeout_seconds: int) -> None:
     deadline = time.time() + timeout_seconds
     last_status: dict[str, Any] = {}
+    sleep_sec = 4
     while time.time() < deadline:
         last_status = graph_get(version, video_id, access_token, fields="status")
         status = last_status.get("status") or {}
@@ -265,7 +316,8 @@ def wait_for_facebook_video(version: str, video_id: str, access_token: str, time
             return
         if proc == "error" or pub == "error":
             raise SystemExit(f"Facebook processing failed: {last_status}")
-        time.sleep(10)
+        time.sleep(sleep_sec)
+        sleep_sec = min(20, sleep_sec + 2)
     raise SystemExit(f"Timed out waiting for Facebook publish: {last_status}")
 
 

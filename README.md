@@ -48,3 +48,18 @@ V2 tracking tables include:
 - `content_items`: row usage by `page_key`
 - `render_jobs`: render job/output history
 
+## Dragon Cinema (No Text Overlay)
+
+New page setup:
+- `pages\dragon_cinema\content\dragon_prompt_bank.xlsx`
+- `configs\pages\dragon_cinema.yaml`
+- `scripts\generate_dragon_chain_reel.py`
+- `scripts\run_dragon_cinema.cmd`
+
+Flow:
+1. Pick next unused row from Excel (`prompt_pool` sheet).
+2. Generate scene A (10s, 480p, 9:16) with Grok.
+3. Extract last frame from scene A.
+4. Generate scene B (10s continuation) using that frame.
+5. Stitch A+B locally to final ~20s reel.
+

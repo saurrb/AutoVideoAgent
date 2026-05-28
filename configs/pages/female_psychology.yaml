@@ -3,7 +3,7 @@ style_preset: default_style
 
 video:
   duration_sec: 15
-  resolution: "696x1280"
+  resolution: "720x1280"
   fps: 30
   background: "black"
 
@@ -13,13 +13,12 @@ assets:
   audio_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/female_psychology/assets/music/bg.mp3"
 
 content:
-  provider: excel
+  provider: db
   xlsx_path: "pages/female_psychology/content/reel_content_bank.xlsx"
   sheet_name: "content_pool"
   batch_size: 5
 
 render:
-  background_video_dir: "pages/female_psychology/assets/backgrounds/video"
-  background_video: "pages/female_psychology/assets/backgrounds/video/bg1_unsharp_okay.mp4"
+  background_image_dir: "pages/female_psychology/assets/backgrounds/images"
   dark_overlay: 0.30
-
+  render_profile: "fast_preview"

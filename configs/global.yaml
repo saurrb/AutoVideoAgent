@@ -1,0 +1,12 @@
+style_preset: default_style
+
+video:
+  duration_sec: 10
+  resolution: "720x1280"
+  fps: 30
+  background: "black"
+
+render:
+  dark_overlay: 0.10
+  use_scene_prompt_grok: false
+

@@ -1,0 +1,13 @@
+{
+  "policy_name": "missed_morning_recovery",
+  "description": "Manual recovery scope when morning batch misses.",
+  "recovery_window": {
+    "include_today": true,
+    "include_next_day_until_local_time": "14:00",
+    "timezone": "Asia/Calcutta"
+  },
+  "notes": [
+    "This file documents operator intent only.",
+    "Current scheduler logic still follows posting_slots + Meta timing constraints."
+  ]
+}

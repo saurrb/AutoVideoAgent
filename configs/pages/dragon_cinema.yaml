@@ -1,0 +1,15 @@
+page_key: dragon_cinema
+profile: dragon_video_chain
+video:
+  scene_duration_sec: 10
+  final_duration_sec: 20
+  resolution: "480p"
+  aspect_ratio: "9:16"
+content:
+  provider: db
+  xlsx_path: "pages/dragon_cinema/content/dragon_scenes.xlsx"
+  sheet_name: "Sheet1"
+render:
+  output_dir: "runs"
+integrations:
+  grok_cli_path: "C:/Users/Saurabh/.grok/bin/grok.exe"

@@ -23,15 +23,43 @@ def _read_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged: dict[str, Any] = dict(base)
+    for k, v in override.items():
+        if isinstance(v, dict) and isinstance(merged.get(k), dict):
+            merged[k] = _deep_merge(merged[k], v)
+        else:
+            merged[k] = v
+    return merged
+
+
+def _validate_config(page_key: str, cfg: dict[str, Any]) -> None:
+    required_top = ["video", "assets", "content", "render", "style"]
+    for k in required_top:
+        if k not in cfg or not isinstance(cfg[k], dict):
+            raise ValueError(f"[{page_key}] Missing required config object: {k}")
+    if "resolution" not in cfg["video"] or "fps" not in cfg["video"]:
+        raise ValueError(f"[{page_key}] video.resolution and video.fps are required")
+    if "logo_path" not in cfg["assets"]:
+        raise ValueError(f"[{page_key}] assets.logo_path is required")
+    if "xlsx_path" not in cfg["content"] or "sheet_name" not in cfg["content"]:
+        raise ValueError(f"[{page_key}] content.xlsx_path and content.sheet_name are required")
+    if "background_image_dir" not in cfg["render"] and "background_video" not in cfg["render"]:
+        raise ValueError(f"[{page_key}] render.background_image_dir or render.background_video is required")
+
+
 def load_page_config(project_root: Path, page_key: str) -> PageConfig:
+    global_path = project_root / "configs" / "global.yaml"
     page_path = project_root / "configs" / "pages" / f"{page_key}.yaml"
+    global_cfg = _read_yaml(global_path) if global_path.exists() else {}
     page_cfg = _read_yaml(page_path)
-    preset_name = page_cfg.get("style_preset", "default_style")
+    preset_name = page_cfg.get("style_preset", global_cfg.get("style_preset", "default_style"))
     preset_path = project_root / "configs" / "presets" / f"{preset_name}.yaml"
     style_cfg = _read_yaml(preset_path)
 
-    merged = dict(page_cfg)
-    merged["style"] = style_cfg.get("style", {})
+    merged = _deep_merge(global_cfg, page_cfg)
+    merged["style"] = _deep_merge(style_cfg.get("style", {}), merged.get("style", {}))
+    _validate_config(page_key, merged)
     return PageConfig(page_key=page_key, profile=merged)
 
 
