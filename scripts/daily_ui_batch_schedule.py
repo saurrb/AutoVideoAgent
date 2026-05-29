@@ -59,7 +59,7 @@ def _load_plans() -> list[PagePlan]:
         raise RuntimeError(
             f"Missing runtime control file: {runtime_json}. Run scripts/sync_automation_control.py first."
         )
-    cfg = json.loads(runtime_json.read_text(encoding="utf-8"))
+    cfg = json.loads(runtime_json.read_text(encoding="utf-8-sig"))
     plans: list[PagePlan] = []
     for p in cfg.get("pages", []):
         if not bool(p.get("enabled", True)):
@@ -117,11 +117,9 @@ def _generate_reel(plan: PagePlan) -> tuple[Path, str, str]:
 
 def _schedule_dt_for_slot(slot_hhmm: str, now: datetime) -> datetime:
     hh, mm = [int(x) for x in slot_hhmm.split(":")]
-    dt = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
-    # Meta requires schedule between ~20 minutes and 29 days from now.
-    # If slot already passed or too close, move to next day.
-    if dt <= now + timedelta(minutes=25):
-        dt = dt + timedelta(days=1)
+    # New policy: every batch run schedules reels for next day only.
+    base = now + timedelta(days=1)
+    dt = base.replace(hour=hh, minute=mm, second=0, microsecond=0)
     return dt
 
 
@@ -154,12 +152,19 @@ def _fill_caption_on_page(page, caption: str) -> bool:
             if t.count() == 0:
                 continue
             t.click(timeout=5000)
-            # fill() works on textarea/input; for editable divs use keyboard path.
+            # Prefer paste-style single-shot insertion for stability with long text/hashtags.
             try:
-                t.fill(caption)
-            except Exception:
                 page.keyboard.press("Control+A")
-                page.keyboard.type(caption)
+                page.keyboard.press("Backspace")
+                page.keyboard.insert_text(caption)
+            except Exception:
+                # fallback: fill() works on textarea/input
+                try:
+                    t.fill(caption)
+                except Exception:
+                    # last fallback: typed path
+                    page.keyboard.press("Control+A")
+                    page.keyboard.type(caption)
             # Verify caption text is present somewhere on page.
             if _wait_until(lambda: caption[:20].lower() in page.locator("body").inner_text().lower(), timeout_sec=5):
                 return True
@@ -175,8 +180,9 @@ def _fill_schedule_time(page, target: datetime, shot_dir: Path, page_key: str) -
     ).first.click(timeout=10000)
     _wait_until(lambda: page.locator("input:visible").count() > 0 or page.get_by_text(re.compile(r"^\d{1,2}\s+[A-Za-z]{3}\s+\d{4}$")).count() > 0, timeout_sec=8)
 
-    date_text = target.strftime("%d %b %Y").lstrip("0")
-    # This account/UI expects 24-hour time like 15:28.
+    # Preferred stable input style for this account/UI:
+    # date as D/M/YYYY and time as HH then ArrowRight then MM (24h).
+    date_text = f"{target.day}/{target.month}/{target.year}"
     hour_text = target.strftime("%H")
     minute_text = target.strftime("%M")
 
@@ -228,7 +234,9 @@ def _fill_schedule_time(page, target: datetime, shot_dir: Path, page_key: str) -
         page.keyboard.type(date_text)
         page.keyboard.press("Tab")
         page.keyboard.press("Control+A")
-        page.keyboard.type(f"{hour_text}:{minute_text}")
+        page.keyboard.type(hour_text)
+        page.keyboard.press("ArrowRight")
+        page.keyboard.type(minute_text)
         _wait_until(lambda: True, timeout_sec=0.5, poll_sec=0.5)
         page.screenshot(path=str(shot_dir / f"{page_key}_05a_date_filled.png"), full_page=True)
         page.screenshot(path=str(shot_dir / f"{page_key}_05b_time_filled.png"), full_page=True)
@@ -240,7 +248,9 @@ def _fill_schedule_time(page, target: datetime, shot_dir: Path, page_key: str) -
         page.keyboard.type(date_text)
         page.keyboard.press("Tab")
         page.keyboard.press("Control+A")
-        page.keyboard.type(f"{hour_text}:{minute_text}")
+        page.keyboard.type(hour_text)
+        page.keyboard.press("ArrowRight")
+        page.keyboard.type(minute_text)
         _wait_until(lambda: True, timeout_sec=0.5, poll_sec=0.5)
         page.screenshot(path=str(shot_dir / f"{page_key}_05a_date_filled.png"), full_page=True)
         page.screenshot(path=str(shot_dir / f"{page_key}_05b_time_filled.png"), full_page=True)
@@ -255,6 +265,7 @@ def _fill_schedule_time(page, target: datetime, shot_dir: Path, page_key: str) -
     hours_input.click(timeout=5000)
     page.keyboard.press("Control+A")
     page.keyboard.type(hour_text)
+    page.keyboard.press("ArrowRight")
     minutes_input.click(timeout=5000)
     page.keyboard.press("Control+A")
     page.keyboard.type(minute_text)

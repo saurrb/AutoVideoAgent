@@ -105,7 +105,7 @@ def _cleanup_old_runs(days_to_keep: int = 7) -> int:
 def _read_json(path: Path, default: Any) -> Any:
     try:
         if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
+            return json.loads(path.read_text(encoding="utf-8-sig"))
     except Exception:
         pass
     return default
@@ -127,7 +127,14 @@ def _probe_video(video_path: Path) -> tuple[float, bool]:
     return duration, has_audio
 
 
-def _run_render(page_key: str, heartbeat: Any | None = None) -> tuple[Path, dict[str, Any], str]:
+def _kill_process_tree(pid: int) -> None:
+    try:
+        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, text=True, timeout=20)
+    except Exception:
+        pass
+
+
+def _run_render(page_key: str, heartbeat: Any | None = None, timeout_seconds: int = 900) -> tuple[Path, dict[str, Any], str]:
     if page_key == "dragon_cinema":
         cmd = [sys.executable, str(PROJECT_ROOT / "scripts" / "generate_dragon_chain_reel.py"), "--page", page_key]
     else:
@@ -143,6 +150,9 @@ def _run_render(page_key: str, heartbeat: Any | None = None) -> tuple[Path, dict
     next_beat = 10.0
     while proc.poll() is None:
         elapsed = time.time() - started
+        if elapsed >= float(timeout_seconds):
+            _kill_process_tree(proc.pid)
+            raise RuntimeError(f"Render watchdog timeout after {int(elapsed)}s for page={page_key}")
         if heartbeat and elapsed >= next_beat:
             try:
                 heartbeat(round(elapsed, 1))
@@ -463,6 +473,12 @@ def _within_cutoff(now: datetime, cutoff_hhmm: str) -> bool:
     return now <= cutoff
 
 
+def _schedule_dt_for_slot_next_day(slot_hhmm: str, now: datetime) -> datetime:
+    hh, mm = [int(x) for x in slot_hhmm.split(":")]
+    base = now + timedelta(days=1)
+    return base.replace(hour=hh, minute=mm, second=0, microsecond=0)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Unified job runner with resilient Grok retry and scheduling.")
     ap.add_argument("--page", default="", help="Optional page key filter.")
@@ -483,6 +499,7 @@ def main() -> None:
     cutoff_hhmm = str(reliability.get("daily_retry_cutoff", "23:30"))
     backoff_steps = reliability.get("grok_backoff_minutes", [30, 60, 120])
     min_daily_target = int(reliability.get("minimum_daily_target", 1))
+    render_timeout_seconds = int(reliability.get("render_timeout_seconds", 900))
 
     killed = _cleanup_stale_processes(30)
     cleaned = _cleanup_old_runs(int(reliability.get("cleanup_days_to_keep", 7)))
@@ -518,7 +535,7 @@ def main() -> None:
             idem = _build_idempotency_key(plan.page_key, run_date, slot, predicted_content_id)
             if predicted_content_id > 0 and _job_exists_by_idem(db, idem):
                 continue
-            target_dt = _schedule_dt_for_slot(slot, now)
+            target_dt = _schedule_dt_for_slot_next_day(slot, now)
             # If catchup mode is on and the wall-clock slot for *today* is already past,
             # remap it into the next valid future window instead of letting it roll to tomorrow.
             hh, mm = [int(x) for x in slot.split(":")]
@@ -621,6 +638,7 @@ def main() -> None:
                             status="in_progress",
                             extra={"slot": item.slot, "elapsed_sec": sec},
                         ),
+                        timeout_seconds=render_timeout_seconds,
                     )
                     elapsed = round(time.time() - t0, 2)
                     log.write(page=page_key, job_id=job_id, step="rendering", status="ok", extra={"slot": item.slot, "seconds": elapsed})
@@ -736,6 +754,15 @@ def main() -> None:
                         _increment_kpi(db, item.run_date, page_key, rate_limit_hits=1)
                         _state_set(db, job_id, "retry_wait", error=err)
                         log.write(page=page_key, job_id=job_id, step="grok_cooldown", status="wait", extra={"minutes": b, "until": until})
+                        send_telegram(
+                            reel_status_message(
+                                page_key=page_key,
+                                slot=item.slot,
+                                scheduled_for=item.target_dt.isoformat(timespec="minutes"),
+                                status="grok_limit_exceeded",
+                                error=f"{err[:220]} | cooldown_until={until} | retry_in_minutes={b}",
+                            )
+                        )
                         continue
                     _state_set(db, job_id, "failed", error=err)
                     _increment_kpi(db, item.run_date, page_key, failed=1)

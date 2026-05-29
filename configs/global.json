@@ -1,8 +1,9 @@
-{
+﻿{
   "reliability": {
-    "daily_retry_cutoff": "23:30",
+    "daily_retry_cutoff": "23:59",
     "grok_backoff_minutes": [30, 60, 120],
     "minimum_daily_target": 1,
-    "cleanup_days_to_keep": 7
+    "cleanup_days_to_keep": 7,
+    "render_timeout_seconds": 900
   }
 }
