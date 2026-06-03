@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import random
 from pathlib import Path
 
@@ -136,7 +136,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--out",
-        default="pages/daily_desire_facts/content/reel_content_bank.xlsx",
+        default="pages/page2_daily_desire_facts/content/reel_content_bank.xlsx",
         help="Output workbook path.",
     )
     ap.add_argument("--rows", type=int, default=1000, help="Number of content rows.")
@@ -151,3 +151,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

@@ -28,6 +28,13 @@ _load_plans = _daily._load_plans
 _generate_reel = _daily._generate_reel
 _upload_and_schedule_with_retry = _daily._upload_and_schedule_with_retry
 
+def _json_safe(value):
+    try:
+        json.dumps(value)
+        return value
+    except Exception:
+        return str(value)
+
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Generate and schedule one reel for one page.")
@@ -64,9 +71,9 @@ def main() -> None:
         "retried": bool(status.get("retried", False)),
         "attempt": status.get("attempt"),
         "target_time": status.get("target_time"),
-        "url": status.get("url", ""),
+        "url": str(status.get("url", "")),
         "story_toggle_on": status.get("story_toggle_on"),
-        "attempts": status.get("attempts", []),
+        "attempts": [_json_safe(a) for a in (status.get("attempts", []) or [])],
     }
     out = {
         "page": plan.page_key,

@@ -1,4 +1,4 @@
-page_key: dragon_cinema
+﻿page_key: dragon_cinema
 profile: dragon_video_chain
 video:
   scene_duration_sec: 10
@@ -7,9 +7,10 @@ video:
   aspect_ratio: "9:16"
 content:
   provider: db
-  xlsx_path: "pages/dragon_cinema/content/dragon_scenes.xlsx"
+  xlsx_path: "pages/page3_dragon_cinema/content/dragon_scenes.xlsx"
   sheet_name: "Sheet1"
 render:
   output_dir: "runs"
 integrations:
   grok_cli_path: "C:/Users/Saurabh/.grok/bin/grok.exe"
+

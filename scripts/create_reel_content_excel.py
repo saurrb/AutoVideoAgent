@@ -59,9 +59,10 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--out",
-        default="pages/female_psychology/content/reel_content_bank.xlsx",
+        default="pages/page1_female_psychology/content/reel_content_bank.xlsx",
         help="Path to output Excel workbook.",
     )
     args = ap.parse_args()
     main(Path(args.out))
+
 

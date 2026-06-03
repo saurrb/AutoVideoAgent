@@ -134,9 +134,21 @@ def _kill_process_tree(pid: int) -> None:
         pass
 
 
-def _run_render(page_key: str, heartbeat: Any | None = None, timeout_seconds: int = 900) -> tuple[Path, dict[str, Any], str]:
+def _run_render(
+    page_key: str,
+    heartbeat: Any | None = None,
+    timeout_seconds: int = 900,
+    slot: str = "",
+    target_dt: datetime | None = None,
+) -> tuple[Path, dict[str, Any], str]:
     if page_key == "dragon_cinema":
         cmd = [sys.executable, str(PROJECT_ROOT / "scripts" / "generate_dragon_chain_reel.py"), "--page", page_key]
+        if slot:
+            cmd.extend(["--slot", slot])
+        if target_dt is not None:
+            cmd.extend(["--schedule-date", target_dt.strftime("%Y-%m-%d")])
+    elif page_key == "page4_relationship":
+        cmd = [sys.executable, str(PROJECT_ROOT / "scripts" / "generate_page4_reel.py")]
     else:
         cmd = [sys.executable, str(PROJECT_ROOT / "scripts" / "create_and_post_reel.py"), "--page", page_key, "--dry-run"]
     proc = subprocess.Popen(
@@ -171,6 +183,8 @@ def _run_render(page_key: str, heartbeat: Any | None = None, timeout_seconds: in
         caption = f"{caption}\n\n{hashtags}".strip() if (caption or hashtags) else ""
         if "output_mp4" not in payload and "final_mp4" in payload:
             payload["output_mp4"] = payload["final_mp4"]
+    elif page_key == "page4_relationship":
+        caption = str(payload.get("caption", "")).strip()
     else:
         caption_file = manifest.with_suffix(".caption.txt")
         caption = caption_file.read_text(encoding="utf-8").strip() if caption_file.exists() else ""
@@ -178,7 +192,7 @@ def _run_render(page_key: str, heartbeat: Any | None = None, timeout_seconds: in
 
 
 def _grok_dependent(page_key: str) -> bool:
-    if page_key == "dragon_cinema":
+    if page_key in {"dragon_cinema", "page4_relationship"}:
         return True
     try:
         cfg = load_page_config(PROJECT_ROOT, page_key).profile
@@ -189,7 +203,16 @@ def _grok_dependent(page_key: str) -> bool:
 
 def _classify_generation_error(err: str) -> str:
     s = (err or "").lower()
-    if "rate limit" in s or "exceeded" in s or "429" in s or "quota" in s:
+    if (
+        "rate limit" in s
+        or "exceeded" in s
+        or "429" in s
+        or "quota" in s
+        or "spending-limit" in s
+        or "run out of credits" in s
+        or "need a grok subscription" in s
+        or "403 forbidden" in s
+    ):
         return "grok_rate_limit"
     if "timed out" in s or "timeout" in s or "connection" in s:
         return "transient"
@@ -234,6 +257,9 @@ def _db_item_used(conn: sqlite3.Connection, page_key: str, item_id: int) -> bool
 
 
 def _predict_next_content_ids(conn: sqlite3.Connection, page_key: str, slots_count: int) -> list[int]:
+    if page_key == "page4_relationship":
+        # Page4 is AI-only generation (no DB/Excel bank); use slot-index placeholders.
+        return [i for i in range(1, slots_count + 1)]
     if page_key == "dragon_cinema":
         rows = conn.execute(
             "SELECT item_id FROM content_bank_rows "
@@ -639,6 +665,8 @@ def main() -> None:
                             extra={"slot": item.slot, "elapsed_sec": sec},
                         ),
                         timeout_seconds=render_timeout_seconds,
+                        slot=item.slot,
+                        target_dt=item.target_dt,
                     )
                     elapsed = round(time.time() - t0, 2)
                     log.write(page=page_key, job_id=job_id, step="rendering", status="ok", extra={"slot": item.slot, "seconds": elapsed})
@@ -653,7 +681,8 @@ def main() -> None:
                         pending.remove(item)
                         continue
                     duration, has_audio = _probe_video(video)
-                    if (not video.exists()) or duration <= 0.5 or (not has_audio) or (not caption.strip()):
+                    require_audio = page_key != "dragon_cinema"
+                    if (not video.exists()) or duration <= 0.5 or (require_audio and (not has_audio)) or (not caption.strip()):
                         raise RuntimeError(f"health_check_failed:{video.exists()}:{duration}:{has_audio}:{bool(caption.strip())}")
 
                     _state_set(db, job_id, "uploading", content_id=content_id, idempotency_key=idem, manifest_path=str(manifest), video_path=str(video), caption=caption, target_time=item.target_dt.isoformat())

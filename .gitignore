@@ -12,6 +12,21 @@ runs/
 logs/
 output/
 archive/
+*.sqlite3-shm
+*.sqlite3-wal
+airflow/home/
+airflow/wsl_home/
+airflow/pids/
+airflow/runtime_logs/
+temp_*.json
+temp_*.txt
+tmp_*.py
+scene_prompts_*.json
+scene_prompts_*.txt
+scenes.json
+scenes_prompts.txt
+generated_relationship_reel.json
+relationship_reel.json
 
 # OS/editor
 .DS_Store

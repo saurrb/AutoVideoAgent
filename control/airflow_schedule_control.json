@@ -1,0 +1,65 @@
+{
+  "timezone": "Asia/Calcutta",
+  "notes": {
+    "daily_run_time": "When Airflow starts this page pipeline, in HH:MM 24-hour local time.",
+    "target_day_offset": "0=today, 1=tomorrow, 2=day after tomorrow, etc. Used when DAG runs automatically or manual trigger leaves target_dates empty.",
+    "posting_slots": "Meta/Facebook schedule slots in HH:MM 24-hour local time. Used when manual trigger leaves slots empty."
+  },
+  "pages": {
+    "female_psychology": {
+      "enabled": true,
+      "daily_run_time": "01:00",
+      "target_day_offset": 1,
+      "posting_slots": [
+        "10:30",
+        "12:30",
+        "14:30",
+        "16:30",
+        "18:30",
+        "20:30",
+        "22:30"
+      ]
+    },
+    "daily_desire_facts": {
+      "enabled": true,
+      "daily_run_time": "02:00",
+      "target_day_offset": 1,
+      "posting_slots": [
+        "10:30",
+        "12:30",
+        "14:30",
+        "16:30",
+        "18:30",
+        "20:30",
+        "22:30"
+      ]
+    },
+    "dragon_cinema": {
+      "enabled": true,
+      "daily_run_time": "03:00",
+      "target_day_offset": 1,
+      "posting_slots": [
+        "09:00",
+        "11:00",
+        "13:00",
+        "15:00",
+        "17:00",
+        "19:00",
+        "21:00",
+        "23:00"
+      ]
+    },
+    "page4_relationship": {
+      "enabled": true,
+      "daily_run_time": "05:00",
+      "target_day_offset": 1,
+      "posting_slots": [
+        "09:00",
+        "12:00",
+        "15:00",
+        "18:00",
+        "21:00"
+      ]
+    }
+  }
+}

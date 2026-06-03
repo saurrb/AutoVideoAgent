@@ -129,7 +129,7 @@ def build_lines(max_lines: int = 10_000) -> list[str]:
 
 
 def main() -> None:
-    out_file = Path("pages/female_psychology/content/lines.txt")
+    out_file = Path("pages/page1_female_psychology/content/lines.txt")
     out_file.parent.mkdir(parents=True, exist_ok=True)
     lines = build_lines(10_000)
     out_file.write_text("\n".join(lines), encoding="utf-8")
@@ -139,4 +139,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 

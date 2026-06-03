@@ -27,8 +27,9 @@
 
 ## Add a New Page
 1. Create `pages/<new_page_key>/...` folders following `female_psychology`.
-2. Copy and edit `configs/pages/female_psychology.yaml` to `configs/pages/<new_page_key>.yaml`.
+2. Copy and edit `configs/pages/page1_female_psychology.yaml` to `configs/pages/<new_page_key>.yaml`.
 3. Point config paths to that page's `content` and `assets`.
 4. Run:
    - `tools\\render_v2.cmd --page <new_page_key>`
+
 

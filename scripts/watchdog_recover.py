@@ -28,6 +28,7 @@ def _task_name_for_page(page_key: str) -> str:
         "female_psychology": "AutoVideoAgent_Page1_FemalePsychology_8AM",
         "daily_desire_facts": "AutoVideoAgent_Page2_DailyDesire_830AM",
         "dragon_cinema": "AutoVideoAgent_Page3_DragonCinema_9AM",
+        "page4_relationship": "AutoVideoAgent_Page4_Relationship_7AM",
     }
     return names.get(page_key, "")
 
@@ -143,4 +144,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

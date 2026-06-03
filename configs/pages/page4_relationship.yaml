@@ -1,0 +1,44 @@
+page_key: page4_relationship
+style_preset: default_style
+
+style: {}
+
+video:
+  duration_sec: 20
+  resolution: "720x1280"
+  fps: 30
+  background: "black"
+
+assets:
+  logo_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/page4_relationship/assets/logo/logo1.png"
+  audio_dir: "pages/page4_relationship/assets/music"
+
+content:
+  provider: db
+  db_path: data/v2/state.sqlite3
+  xlsx_path: "pages/page4_relationship/content/reel_content_bank.xlsx"
+  sheet_name: "Sheet1"
+  excel_source: pages/page4_relationship/content/reel_content_bank.xlsx
+  excel_sheet: Sheet1
+
+render:
+  background_image_dir: "pages/page4_relationship/assets/scenes/final"
+
+speechma:
+  enabled: true
+  run_cmd: pages/automation_tools/speechma/speechma_run.ps1
+  voice_profile: pages/page4_relationship/content/voice_profile.json
+
+publish:
+  mode: ui_schedule
+  facebook_page_profile_id: "61589452748099"
+  business_asset_id: ""
+
+schedule:
+  timezone: Asia/Calcutta
+  posting_slots:
+    - "09:00"
+    - "12:00"
+    - "15:00"
+    - "18:00"
+    - "21:00"

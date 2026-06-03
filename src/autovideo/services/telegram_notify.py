@@ -34,17 +34,35 @@ def send_telegram(message: str) -> bool:
         return False
 
 
-def reel_status_message(*, page_key: str, slot: str, scheduled_for: str, status: str, video: str = "", error: str = "") -> str:
+def reel_status_message(
+    *,
+    page_key: str,
+    slot: str,
+    scheduled_for: str,
+    status: str,
+    video: str = "",
+    error: str = "",
+    page_label: str = "",
+    run_folder: str = "",
+    failed_stage: str = "",
+) -> str:
+    status_text = str(status or "").strip().lower()
+    label = (page_label or page_key.replace("_", " ").title()).strip()
+    title = "[SCHEDULED] Reel Scheduled" if status_text in {"scheduled", "complete"} else "[FAILED] Reel Failed"
     lines = [
-        "AutoVideoAgent Reel Update",
-        f"page: {page_key}",
-        f"slot: {slot}",
-        f"scheduled_for: {scheduled_for}",
-        f"status: {status}",
+        title,
+        "",
+        f"Page: {label}",
+        f"Slot: {slot}",
+        f"Publish Time: {scheduled_for}",
+        f"Status: {status_text.upper() or 'UNKNOWN'}",
     ]
+    if status_text not in {"scheduled", "complete"} and failed_stage:
+        lines.append(f"Failed Stage: {failed_stage}")
     if video:
-        lines.append(f"video: {video}")
+        lines.extend(["", f"Video: {video}"])
+    if run_folder:
+        lines.append(f"Run Folder: {run_folder}")
     if error:
-        lines.append(f"error: {error[:300]}")
+        lines.extend(["", f"Reason: {error[:500]}"])
     return "\n".join(lines)
-

@@ -102,6 +102,16 @@ def _generate_reel(plan: PagePlan) -> tuple[Path, str, str]:
         hashtags = str(manifest.get("hashtags", "")).strip()
         merged_caption = f"{caption}\n\n{hashtags}".strip() if (caption or hashtags) else ""
         return manifest_path, video, merged_caption
+    if plan.generator_type == "page4_pipeline" or plan.page_key == "page4_relationship":
+        cmd = [sys.executable, str(PROJECT_ROOT / "scripts" / "generate_page4_reel.py")]
+        proc = subprocess.run(cmd, cwd=PROJECT_ROOT, capture_output=True, text=True)
+        if proc.returncode != 0:
+            raise RuntimeError(f"Reel generation failed for {plan.page_key}:\n{proc.stdout}\n{proc.stderr}")
+        manifest_path = _parse_manifest_from_stdout(proc.stdout)
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        video = str(Path(manifest["output_mp4"]).resolve())
+        caption = str(manifest.get("caption", "")).strip()
+        return manifest_path, video, caption
 
     cmd = [sys.executable, str(PROJECT_ROOT / "scripts" / "create_and_post_reel.py"), "--page", plan.page_key, "--dry-run"]
     proc = subprocess.run(cmd, cwd=PROJECT_ROOT, capture_output=True, text=True)
@@ -185,6 +195,78 @@ def _fill_schedule_time(page, target: datetime, shot_dir: Path, page_key: str) -
     date_text = f"{target.day}/{target.month}/{target.year}"
     hour_text = target.strftime("%H")
     minute_text = target.strftime("%M")
+
+    def _fill_row_by_label(label_regex: str) -> bool:
+        try:
+            lbl = page.get_by_text(re.compile(label_regex, re.I)).first
+            if lbl.count() == 0:
+                return False
+            # On Meta schedule card, date/time inputs are typically the first two visible
+            # inputs after the network label node.
+            d = lbl.locator("xpath=following::input[1]").first
+            t = lbl.locator("xpath=following::input[2]").first
+            if d.count() > 0 and t.count() > 0:
+                d.click(timeout=4000)
+                page.keyboard.press("Control+A")
+                page.keyboard.type(date_text)
+                t.click(timeout=4000)
+                page.keyboard.press("Control+A")
+                page.keyboard.type(hour_text)
+                page.keyboard.press("ArrowRight")
+                page.keyboard.type(minute_text)
+                return True
+        except Exception:
+            return False
+        return False
+
+    # First try explicit per-network rows when present (Facebook always, Instagram optional).
+    filled_explicit = False
+    if _fill_row_by_label(r"^Facebook$"):
+        filled_explicit = True
+    # Instagram row appears only on some pages; fill only if present.
+    if _fill_row_by_label(r"^Instagram$"):
+        filled_explicit = True
+    if filled_explicit:
+        _wait_until(lambda: True, timeout_sec=0.5, poll_sec=0.5)
+        page.screenshot(path=str(shot_dir / f"{page_key}_05a_date_filled.png"), full_page=True)
+        page.screenshot(path=str(shot_dir / f"{page_key}_05b_time_filled.png"), full_page=True)
+        return
+
+    # Preferred on newer Meta variants: fill every visible schedule row (Facebook + Instagram)
+    # by targeting all date-like inputs in the scheduling card.
+    visible_inputs = page.locator("input:visible")
+    date_like_inputs = []
+    for i in range(visible_inputs.count()):
+        inp = visible_inputs.nth(i)
+        try:
+            val = (inp.get_attribute("value") or "").strip()
+            ph = (inp.get_attribute("placeholder") or "").strip()
+            aria = (inp.get_attribute("aria-label") or "").strip().lower()
+            blob = f"{val} {ph} {aria}".lower()
+            if ("date" in blob) or re.search(r"\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}", blob):
+                date_like_inputs.append(inp)
+        except Exception:
+            continue
+    if date_like_inputs:
+        filled = 0
+        for inp in date_like_inputs:
+            try:
+                inp.click(timeout=5000)
+                page.keyboard.press("Control+A")
+                page.keyboard.type(date_text)
+                page.keyboard.press("Tab")
+                page.keyboard.press("Control+A")
+                page.keyboard.type(hour_text)
+                page.keyboard.press("ArrowRight")
+                page.keyboard.type(minute_text)
+                filled += 1
+            except Exception:
+                continue
+        if filled > 0:
+            _wait_until(lambda: True, timeout_sec=0.5, poll_sec=0.5)
+            page.screenshot(path=str(shot_dir / f"{page_key}_05a_date_filled.png"), full_page=True)
+            page.screenshot(path=str(shot_dir / f"{page_key}_05b_time_filled.png"), full_page=True)
+            return
 
     date_input = page.locator(
         "input[aria-label*='date' i], input[placeholder*='date' i], input[name*='date' i]"

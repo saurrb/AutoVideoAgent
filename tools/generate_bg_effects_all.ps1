@@ -1,8 +1,8 @@
 ﻿$ErrorActionPreference = "Stop"
 
 $root = "C:\Users\Saurabh\Documents\AutoVideoAgent"
-$imagesDir = Join-Path $root "pages\female_psychology\assets\backgrounds\images"
-$videosDir = Join-Path $root "pages\female_psychology\assets\backgrounds\video"
+$imagesDir = Join-Path $root "pages\page1_female_psychology\assets\backgrounds\images"
+$videosDir = Join-Path $root "pages\page1_female_psychology\assets\backgrounds\video"
 $logDir = Join-Path $root "logs"
 
 New-Item -ItemType Directory -Force -Path $videosDir | Out-Null
@@ -51,4 +51,5 @@ foreach ($img in $images) {
 }
 
 Write-Host "DONE"
+
 

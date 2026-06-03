@@ -10,20 +10,21 @@ video:
   background: "black"
 
 assets:
-  logo_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/daily_desire_facts/assets/logo/logo1.png"
-  audio_dir: "pages/daily_desire_facts/assets/music"
-  audio_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/daily_desire_facts/assets/music/bg.mp3"
+  logo_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/page2_daily_desire_facts/assets/logo/logo1.png"
+  audio_dir: "pages/page2_daily_desire_facts/assets/music"
+  audio_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/page2_daily_desire_facts/assets/music/bg.mp3"
 
 content:
   provider: db
-  xlsx_path: "pages/daily_desire_facts/content/reel_content_bank.xlsx"
+  xlsx_path: "pages/page2_daily_desire_facts/content/reel_content_bank.xlsx"
   sheet_name: "content_pool"
   batch_size: 1
 
 render:
-  background_image_dir: "pages/daily_desire_facts/assets/backgrounds/generated"
-  background_video_dir: "pages/daily_desire_facts/assets/backgrounds/video"
-  background_video: "pages/daily_desire_facts/assets/backgrounds/video/bg1_unsharp_okay.mp4"
+  background_image_dir: "pages/page2_daily_desire_facts/assets/backgrounds/generated"
+  background_video_dir: "pages/page2_daily_desire_facts/assets/backgrounds/video"
+  background_video: "pages/page2_daily_desire_facts/assets/backgrounds/video/bg1_unsharp_okay.mp4"
   dark_overlay: 0.10
   use_scene_prompt_grok: true
   require_scene_prompt_grok: true
+

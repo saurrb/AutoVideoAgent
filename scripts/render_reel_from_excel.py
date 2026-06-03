@@ -83,11 +83,12 @@ def main(xlsx_path: Path, style_json: Path, out_dir: Path, sheet_name: str, audi
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--xlsx", default="pages/female_psychology/content/reel_content_bank.xlsx")
+    ap.add_argument("--xlsx", default="pages/page1_female_psychology/content/reel_content_bank.xlsx")
     ap.add_argument("--style-json", default="output/exact_clone/reel_female_psychology_v2.json")
     ap.add_argument("--out-dir", default="output/exact_clone")
     ap.add_argument("--sheet", default="content_pool")
     ap.add_argument("--audio", default="assets/music/bg.mp3")
     args = ap.parse_args()
     main(Path(args.xlsx), Path(args.style_json), Path(args.out_dir), args.sheet, args.audio)
+
 

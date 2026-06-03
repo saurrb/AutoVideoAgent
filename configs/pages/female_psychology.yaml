@@ -8,17 +8,18 @@ video:
   background: "black"
 
 assets:
-  logo_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/female_psychology/assets/logo/logo1.png"
-  audio_dir: "pages/female_psychology/assets/music"
-  audio_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/female_psychology/assets/music/bg.mp3"
+  logo_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/page1_female_psychology/assets/logo/logo1.png"
+  audio_dir: "pages/page1_female_psychology/assets/music"
+  audio_path: "C:/Users/Saurabh/Documents/AutoVideoAgent/pages/page1_female_psychology/assets/music/bg.mp3"
 
 content:
   provider: db
-  xlsx_path: "pages/female_psychology/content/reel_content_bank.xlsx"
+  xlsx_path: "pages/page1_female_psychology/content/reel_content_bank.xlsx"
   sheet_name: "content_pool"
   batch_size: 5
 
 render:
-  background_image_dir: "pages/female_psychology/assets/backgrounds/images"
+  background_image_dir: "pages/page1_female_psychology/assets/backgrounds/images"
   dark_overlay: 0.30
   render_profile: "fast_preview"
+
