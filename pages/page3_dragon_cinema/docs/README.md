@@ -3,25 +3,24 @@
 Purpose
 - No text-overlay reels.
 - 20s final reel built as 10s scene A + 10s scene B continuation.
-- Scene B uses the last frame of scene A as continuity reference.
+- Grok CLI does not reliably read the previous video/image, so Scene B uses written continuity details instead of a last-frame reference.
 
 Content Source
-- Excel: pages/page3_dragon_cinema/content/dragon_scenes.xlsx
-- Sheet: Sheet1
+- AI-generated at run time by Grok text generation.
+- The Excel file is retained only as historical/reference content.
 
-Columns
-- id
-- heading
-- scene_a_prompt
-- scene_b_prompt
-- scene_duration_sec
-- target_resolution
-- target_aspect_ratio
-- used
-- notes
+Airflow Steps
+- generate_dragon_package
+- scene_a_generate
+- scene_b_generate
+- final_render
+- upload_schedule
+- telegram_notify
 
-Scale Plan
-- Keep first 5 rows as quality seed.
-- Expand to 10,000 rows in batches (e.g., 250 rows x 40 batches).
-- Used rows are tracked in pages/page3_dragon_cinema/data/used_rows.json so the Excel structure stays unchanged.
+Generation Rules
+- No narration.
+- No text overlay.
+- Two Grok CLI videos, about 10 seconds each.
+- Scene B directly continues Scene A using repeated dragon/world continuity details.
+- Final FFmpeg render normalizes to 720x1280, preserves audio, and overlays the page logo.
 

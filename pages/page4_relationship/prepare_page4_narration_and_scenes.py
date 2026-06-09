@@ -6,11 +6,18 @@ import math
 import os
 import re
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PAGE_KEY = "page4_relationship"
+SRC_ROOT = PROJECT_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from autovideo.services.grok_cli import run_grok_text  # noqa: E402
+from autovideo.services.text_utils import extract_json_object, normalize_payload, normalize_text  # noqa: E402
 
 
 def _default_windows_home() -> Path | None:
@@ -46,81 +53,48 @@ def now_iso() -> str:
 
 
 def _extract_first_json_blob(text: str) -> dict:
-    t = (text or "").strip()
-    t = re.sub(r"^```(?:json)?\s*", "", t, flags=re.IGNORECASE)
-    t = re.sub(r"\s*```$", "", t)
-    try:
-        return json.loads(t)
-    except Exception:
-        pass
-    dec = json.JSONDecoder()
-    for i, ch in enumerate(t):
-        if ch != "{":
-            continue
-        try:
-            obj, _end = dec.raw_decode(t[i:])
-            if isinstance(obj, dict):
-                return obj
-        except Exception:
-            continue
-    m = re.search(r"\{[\s\S]*\}", t)
-    if not m:
-        raise RuntimeError("No JSON object found in model output.")
-    return json.loads(m.group(0))
+    return extract_json_object(text)
 
 
 def _repair_mojibake(s: str) -> str:
-    t = str(s or "")
-    # Typical UTF-8->cp1252 mojibake signatures.
-    if any(x in t for x in ("Ã", "â€™", "â€œ", "â€", "ðŸ", "Å")):
-        try:
-            t = t.encode("latin1", errors="ignore").decode("utf-8", errors="ignore")
-        except Exception:
-            pass
-    return t
+    return normalize_text(s)
 
 
 def _normalize_text(s: str) -> str:
-    t = _repair_mojibake(str(s or ""))
-    # Convert escaped newlines into real line breaks when model emits "\\n".
-    t = t.replace("\\r\\n", "\n").replace("\\n", "\n")
-    # Normalize line endings.
-    t = t.replace("\r\n", "\n").replace("\r", "\n")
-    # Remove zero-width chars that can appear in copied model output.
-    t = t.replace("\u200b", "").replace("\ufeff", "")
-    return t.strip()
+    return normalize_text(s)
 
 
 def _normalize_payload(obj):
-    if isinstance(obj, dict):
-        return {k: _normalize_payload(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_normalize_payload(v) for v in obj]
-    if isinstance(obj, str):
-        return _normalize_text(obj)
-    return obj
+    return normalize_payload(obj)
 
 
 def _run_grok_text(prompt: str) -> str:
-    grok_exe = _default_grok_exe()
-    if not grok_exe.exists():
-        raise RuntimeError(f"Grok CLI not found: {grok_exe}")
-    p = subprocess.run([str(grok_exe), "-p", prompt], capture_output=True, text=True)
-    combined = f"{p.stdout or ''}\n{p.stderr or ''}".lower()
-    limit_signals = [
-        "rate limit",
-        "rate-limit",
-        "exceeded",
-        "too many requests",
-        "quota",
-        "limit reached",
-        "try again later",
-    ]
-    if any(sig in combined for sig in limit_signals):
-        raise RuntimeError("GROK_LIMIT_REACHED: Grok rate/quota limit detected. Failing without fallback.")
-    if p.returncode != 0:
-        raise RuntimeError(f"grok text generation failed\nSTDOUT:\n{p.stdout}\nSTDERR:\n{p.stderr}")
-    return (p.stdout or "").strip()
+    return run_grok_text(prompt, grok_exe=_default_grok_exe(), cwd=PROJECT_ROOT).strip()
+
+
+def _extract_json_with_retry(prompt: str, *, retry_instruction: str) -> dict:
+    raw = _run_grok_text(prompt)
+    try:
+        return _extract_first_json_blob(raw)
+    except Exception as first_error:
+        repair_prompt = f"""
+Your previous response was not parseable JSON.
+
+Original task:
+{prompt}
+
+Return ONLY valid JSON now. Do not include markdown, explanation, headings, bullets, or commentary.
+{retry_instruction}
+""".strip()
+        raw_retry = _run_grok_text(repair_prompt)
+        try:
+            return _extract_first_json_blob(raw_retry)
+        except Exception as retry_error:
+            raise RuntimeError(
+                "Grok did not return valid JSON after retry. "
+                f"First error: {first_error}. Retry error: {retry_error}. "
+                f"First output preview: {raw[:600]!r}. Retry output preview: {raw_retry[:600]!r}"
+            ) from retry_error
 
 
 def _generate_content_json() -> dict:
@@ -143,11 +117,15 @@ Output STRICT JSON only with this schema:
 }
 
 Hard constraints:
-- narration_text: about 90-110 words, <1 minute speech, one strong opening hook.
+- narration_text: about 150-200 words, one strong opening hook.
 - caption_text: engagement-focused, concise, with CTA question.
-- hashtags: 20-30 tags, high-RPM relationship/self-improvement mix, US-audience intent.
+- hashtags: 10-15 tags, high-RPM relationship/self-improvement mix, US-audience intent.
 - Keep language clear and practical.
 - Do not include any banned source names in narration/caption/hashtags.
+- First sentence must create strong emotional tension or a pattern interrupt.
+- Prefer "ouch, that is true" insights over generic advice.
+- Use a clear mini-arc: hook -> common mistake -> emotional consequence -> better rule -> memorable closing line.
+- Keep monetization-safe language: relationship psychology, self-respect, boundaries, communication, confidence, emotional maturity.
 
 Allowed hook styles (use one or similar):
 - People are obsessed with [thing] and I can see why...
@@ -157,11 +135,21 @@ Allowed hook styles (use one or similar):
 - STOP doing [old method] and do THIS instead.
 - Why is [outcome] so hard? Let’s talk about it.
 - Think [objection]? Think again.
+- Most people confuse [healthy thing] with [unhealthy thing].
+- If you are always [old behavior], [desired outcome] quietly fades.
+- The fastest way to lose [value] is chasing [approval/attention/validation].
+- Healthy love does not feel like [emotional panic/control/confusion].
 
-No markdown. JSON only.
+No markdown. JSON only. The first character of your response must be { and the last character must be }.
 """.strip()
 
-    payload = _extract_first_json_blob(_run_grok_text(prompt))
+    payload = _extract_json_with_retry(
+        prompt,
+        retry_instruction=(
+            'Required schema: {"hook_used":"...","narration_text":"...",'
+            '"caption_text":"...","hashtags":["#tag1","#tag2"]}'
+        ),
+    )
     payload = _normalize_payload(payload)
 
     narration = _normalize_text(payload.get("narration_text", ""))
@@ -178,7 +166,7 @@ No markdown. JSON only.
             raise RuntimeError(f"Generated content contains banned source name: {b}")
 
     wc = len(re.findall(r"\b\w+\b", narration))
-    if wc < 70 or wc > 140:
+    if wc < 130 or wc > 230:
         raise RuntimeError(f"Narration length out of range: {wc} words")
     if len(hashtags) < 10:
         raise RuntimeError("Too few hashtags generated")
@@ -210,43 +198,53 @@ def _probe_audio_seconds(ffprobe_exe: Path, audio_file: Path) -> float:
         return 0.0
 
 
+def _character_bible() -> str:
+    return """
+STRICT CHARACTER CONTINUITY BIBLE:
+Maya: adult woman, smooth white circular face, tiny black dot/line eyes, expressive worried brows, tiny mouth, short black bob haircut tucked behind ears, slim simplified body. Keep the same face shape, black bob, proportions, and serious emotional expression language in every image. Her outfit may vary slightly within a muted dark palette: charcoal, slate, deep olive, black, soft brown; modern simple relationship-cartoon clothing only.
+Leo: adult man, smooth white circular face, tiny black dot/line eyes, expressive worried brows, tiny mouth, short neat black hair, slim simplified body. Keep the same face shape, neat black hair, proportions, and serious emotional expression language in every image. His outfit may vary slightly within a muted dark palette: navy, charcoal, black, dark grey, muted brown; modern simple relationship-cartoon clothing only.
+No analyst. No narrator. No therapist. No observer. No clipboard. No extra third character unless the narration beat genuinely requires a memory silhouette or symbolic background figure.
+""".strip()
+
+
+def _triptych_style_rules() -> str:
+    return """
+Generate one image only. LANDSCAPE 16:9 wide illustrated cartoon triptych, not portrait.
+STRICT COMPOSITION RULES:
+1. The image must have exactly three readable emotional beats: LEFT SECTION, CENTER SECTION, RIGHT SECTION. They may be separated by lighting, doorway, furniture, shadows, window frames, reflections, or composition; they do not need harsh comic borders.
+2. Each section must show a different moment, pose, thought, or emotional action. Do not repeat the same pose three times.
+3. Each section must include its own visible red glow or red emotional light line. Red glow must appear in left, center, and right sections.
+4. The three sections should feel like consecutive emotional beats flowing left to right.
+5. Each section must work as an independent vertical 9:16 crop.
+
+Creative freedom:
+- Sometimes show a direct story moment between Maya and Leo.
+- Sometimes show Maya or Leo alone with their thoughts, fears, or emotional realizations.
+- The visual can be literal or metaphorical, but it must stay grounded in the relationship situation.
+- Use symbolic relationship objects when useful: unread phone messages, two coffee cups, closed doors, rain on a window, an empty chair, framed photo, hallway shadows, a cracked mirror reflection, a half-lit bed, keys on a table, or a calendar reminder.
+- Vary camera language: wide shot, close-up on hands, over-the-shoulder view, window reflection, doorway silhouette, top-down table shot, side profile, almost-touching hands, or a distant couch composition.
+- Emotional actions can include turning away, deleting a message, waiting by the phone, reaching but stopping, sitting apart, looking at an old photo, standing in a doorway, soft repair, guarded arms, or hesitant eye contact.
+- No separate explaining character. The real people in the problem are the characters.
+
+Visual style: simple premium relationship cartoon. Smooth white circular faces, tiny black dot/line eyes, worried brows, tiny mouth. Slim simplified adult bodies, modern dark clothes, crisp black outlines, clean shapes.
+Environment: same dark blue-black emotional visual universe across all images. Locations may vary naturally: dim apartment, bedroom edge, kitchen table, hallway, rainy window, parked car at night, empty cafe corner, phone-lit room, or living room couch. Keep the premium dark relationship-psychology mood, textured walls, soft shadows, warm rim light. Red emotional glow/line is the brand motif.
+Mood: serious relationship psychology, emotional distance, vulnerability, anxiety, repair. Strong emotion in posture: slumped shoulders, hesitant hands, looking away, guarded arms, soft eye contact, relief.
+Important: NOT photorealistic, NOT anime, NOT manga, NOT chibi, NOT purple hair, NOT superhero, NOT fantasy, NOT cute childish cartoon, NOT 3D, NOT realistic human faces.
+No text, no captions, no letters, no signs, no watermark, no logo, no speech bubbles.
+""".strip()
+
+
 def _generate_scenes_json_with_grok(narration: str, scene_count: int) -> dict:
     prompt = f"""
-You are creating scene prompts for an AI video reel pipeline.
+You are creating image prompts for a premium relationship psychology reel.
 
 Task:
-- Convert the narration into exactly {scene_count} scene prompts.
-- Keep continuity and progression from one scene to the next.
+- Convert the narration into exactly {scene_count} LANDSCAPE 16:9 triptych image prompts.
+- Each image prompt must describe one wide image containing exactly three readable emotional beats: LEFT, CENTER, RIGHT.
+- Every image must preserve strict Maya/Leo continuity.
+- The images may be story-based or thought/emotion-based, depending on the narration beat.
+- Use the full wide image like a left-to-right emotional story strip for smooth panning.
 - Output STRICT JSON only (no markdown, no explanation).
-
-STYLE RULES (must apply to every scene):
-- Hand-drawn doodle neon animation style on a pure black background.
-- Expressive off-white chalk-marker outlines, imperfect sketch strokes, playful stick-figure characters with exaggerated emotions and gestures.
-- Bright pastel accent colors: yellow, mint, coral, sky blue, lavender as animated blobs, arrows, highlights, underlines.
-- Smooth 2D motion graphics, energetic kinetic typography, bouncing labels, popping keywords, fast transitions.
-- Psychology-themed infographic visuals: animated brain icons, hearts, thought clouds, chat bubbles, checklists, arrows, dopamine symbols, mood meters, abstract emotional diagrams.
-- Dynamic intro-style motion vocabulary: rapid sketch reveals, scribble transitions, zoom-ins, floating icons, elastic motion.
-- Clean minimalist composition, high contrast, lots of negative space.
-- Fun educational modern explainer aesthetic.
-- Medium-density composition (not crowded).
-- Max 4 major visual elements on screen per scene.
-- At most 2 text callouts/keywords on screen per scene.
-- Strict RULE - Reserve roughly 40-50% negative space.
-- Prioritize one clear focal subject per scene.
-
-NEGATIVE RULES:
-- No photorealism
-- No 3D rendering
-- No cinematic shadows
-- No realistic humans
-- No lip-sync dialogue
-- No dark tones
-- No narration voice
-- Audio intent only: upbeat background music + marker drawing/paper scribble/pop/whoosh/tap/subtle ambient motion SFX.
-
-FORMAT RULES:
-- Each scene must contain 6-7 descriptive lines.
-- Do not include "Scene 1:" labels inside lines.
 
 Required JSON schema:
 {{
@@ -254,15 +252,26 @@ Required JSON schema:
   "scenes": [
     {{
       "index": 1,
-      "lines": ["line 1", "line 2", "line 3", "line 4", "line 5", "line 6"]
+      "beat": "short narration beat this image covers",
+      "left_section": "beginning thought/action, with red glow",
+      "center_section": "strongest emotional moment, with red glow",
+      "right_section": "next emotional consequence or repair, with red glow"
     }}
   ]
 }}
 
 Hard constraints:
 - scenes length MUST be exactly {scene_count}
-- each scenes[i].lines length MUST be 6 or 7
+- each scene must have beat, left_section, center_section, right_section
+- section fields must describe ONLY actions, poses, emotions, symbolic props, camera angle, lighting separation, and environment details
+- section fields must NOT describe hair, eyes, age, clothing color, outfit, face shape, body type, or character appearance
+- section fields must NOT introduce any character design different from the fixed Maya/Leo bible
 - no extra keys outside this structure
+- each section must be different from the other two sections
+- each section must include red glow/red emotional light line
+- sections may be divided by doorway, window, couch, reflection, shadow, table, car window, hallway frame, or lighting rather than hard comic borders
+- no analyst/narrator/therapist/observer character
+- keep Maya and Leo visually consistent across all image prompts
 
 Narration:
 {narration}
@@ -275,45 +284,82 @@ Narration:
         raise RuntimeError("Invalid Grok JSON: missing 'scenes' list.")
     if len(scenes) != scene_count:
         raise RuntimeError(f"Invalid Grok JSON: expected {scene_count} scenes, got {len(scenes)}")
-    for i, s in enumerate(scenes, start=1):
-        lines = (s or {}).get("lines")
-        if not isinstance(lines, list):
-            raise RuntimeError(f"Invalid Grok JSON: scene {i} missing lines list.")
-        if len(lines) < 6 or len(lines) > 7:
-            raise RuntimeError(f"Invalid Grok JSON: scene {i} must have 6-7 lines, got {len(lines)}")
+    for i, scene in enumerate(scenes, start=1):
+        if not isinstance(scene, dict):
+            raise RuntimeError(f"Invalid Grok JSON: scene {i} is not an object.")
+        for key in ("beat", "left_section", "center_section", "right_section"):
+            if not str(scene.get(key, "")).strip():
+                raise RuntimeError(f"Invalid Grok JSON: scene {i} missing {key}.")
     return payload
 
 
 def _fallback_scenes_from_narration(narration: str, scene_count: int) -> dict:
     parts = [x.strip() for x in re.split(r"(?<=[.!?])\s+", narration.strip()) if x.strip()]
     if not parts:
-        parts = [narration.strip() or "Relationship insight scene."]
-    chunks: list[str] = []
-    for i in range(scene_count):
-        chunks.append(parts[i % len(parts)])
+        parts = [narration.strip() or "Relationship anxiety shifts into repair."]
     scenes: list[dict] = []
-    for i, ch in enumerate(chunks, start=1):
-        lines = [
-            "Hand-drawn doodle neon scene on pure black background.",
-            "Off-white chalk-marker stick figures with expressive emotions.",
-            "Pastel accents: yellow, mint, coral, sky blue, lavender.",
-            "Kinetic typography emphasizes key words from this beat.",
-            f"Narrative focus: {ch}",
-            "Clean high-contrast composition with generous negative space.",
-        ]
-        scenes.append({"index": i, "lines": lines})
+    for i in range(scene_count):
+        beat = parts[i % len(parts)]
+        scenes.append({
+            "index": i + 1,
+            "beat": beat,
+            "left_section": f"Maya or Leo quietly feels the tension from this beat: {beat}. Red glow appears near the body.",
+            "center_section": "The emotional pressure becomes visible through posture, distance, or a red line between them.",
+            "right_section": "A small repair attempt, realization, or calmer choice begins while the red glow softens.",
+        })
     return {"scene_count": scene_count, "scenes": scenes}
+
+
+def _strip_page4_character_overrides(text: str) -> str:
+    """Keep Grok's action beat while removing appearance/clothing overrides."""
+    t = _normalize_text(text)
+    # Common pattern from scene-planning models: "Maya, an early 30s woman with ... , shares ...".
+    # Replace the descriptive clause with the fixed character name so the bible remains authoritative.
+    verbs = (
+        "shares|pulls|reaches|feels|sits|stands|looks|turns|holds|walks|paces|stares|listens|asks|speaks|"
+        "leans|crosses|softens|withdraws|waits|notices|tries|stops|faces|opens|closes|touches|checks"
+    )
+    t = re.sub(rf"\bMaya,\s+.*?,\s+({verbs})\b", r"Maya \1", t, flags=re.IGNORECASE)
+    t = re.sub(rf"\bLeo,\s+.*?,\s+({verbs})\b", r"Leo \1", t, flags=re.IGNORECASE)
+    # Remove remaining visual override phrases if Grok included them mid-sentence.
+    t = re.sub(r"\b(an?|the)\s+(early|mid|late)\s+\d0s\s+(woman|man)\b", "", t, flags=re.IGNORECASE)
+    t = re.sub(r"\bwith\s+[^,.]*(hair|eyes|sweater|shirt|dress|jacket|pants|face|body)[^,.]*", "", t, flags=re.IGNORECASE)
+    t = re.sub(r"\bwearing\s+[^,.]*", "", t, flags=re.IGNORECASE)
+    t = re.sub(r",\s*,+", ",", t)
+    t = re.sub(r"\s+,", ",", t)
+    t = re.sub(r"\b(Maya|Leo),\s+", r"\1 ", t)
+    t = re.sub(r"\s+", " ", t).strip(" ,")
+    return t
 
 
 def _scene_json_to_prompt_text(scene_payload: dict) -> str:
     scenes = scene_payload.get("scenes") or []
     blocks: list[str] = []
-    for i, s in enumerate(scenes, start=1):
-        raw_lines = (s or {}).get("lines") or []
-        cleaned = [str(x).strip() for x in raw_lines if str(x).strip()]
-        if len(cleaned) < 6 or len(cleaned) > 7:
-            raise RuntimeError(f"Scene {i} lines must remain 6-7 after cleanup, got {len(cleaned)}")
-        blocks.append("\n".join(cleaned))
+    bible = _character_bible()
+    style = _triptych_style_rules()
+    for i, scene in enumerate(scenes, start=1):
+        beat = _normalize_text((scene or {}).get("beat", ""))
+        left = _strip_page4_character_overrides((scene or {}).get("left_section", ""))
+        center = _strip_page4_character_overrides((scene or {}).get("center_section", ""))
+        right = _strip_page4_character_overrides((scene or {}).get("right_section", ""))
+        if not (beat and left and center and right):
+            raise RuntimeError(f"Scene {i} missing beat/section text after cleanup.")
+        block = f"""
+PAGE4_TRIPTYCH_PROMPT
+{bible}
+
+{style}
+
+Scene {i} overall beat: {beat}
+
+Design this beat as three different moments inside one image:
+LEFT SECTION: {left}
+CENTER SECTION: {center}
+RIGHT SECTION: {right}
+
+CRITICAL: Use ONLY the fixed Maya/Leo character bible for appearance. Ignore any accidental appearance detail in the section text. Do not invent hair, clothing, age, face, anime, manga, purple hair, superhero, fantasy, or doodle variants. Every output must be one 16:9 triptych image with exactly three sections and red glow in all three sections. Return only local generated image path.
+""".strip()
+        blocks.append(block)
     return "\n\n".join(blocks).strip() + "\n"
 
 
@@ -356,7 +402,7 @@ def main() -> None:
         raise RuntimeError(f"speechma_run failed\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}")
 
     voice_seconds = _probe_audio_seconds(Path(args.ffprobe), voice_mp3)
-    scene_count = max(1, int(math.ceil(max(1.0, voice_seconds) / 6.0)))
+    scene_count = max(3, min(5, int(math.ceil(max(1.0, voice_seconds) / 20.0))))
 
     scenes_json = _generate_scenes_json_with_grok(content_json["narration_text"], scene_count)
     scene_prompt_json.write_text(json.dumps(scenes_json, ensure_ascii=False, indent=2), encoding="utf-8")

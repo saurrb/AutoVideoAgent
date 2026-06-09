@@ -142,7 +142,17 @@ async function applyEffects(pageId, pitch, speed, volume) {
 
 async function setSpeechmaText(pageId, text) {
   const b64 = Buffer.from(text, "utf8").toString("base64");
-  const js = `(() => { const txt=atob(\`${b64}\`); const el=document.getElementById("textInput"); if(!el) return {ok:false}; el.value=txt; el.dispatchEvent(new Event("input",{bubbles:true})); el.dispatchEvent(new Event("change",{bubbles:true})); return {ok:true,len:txt.length}; })()`;
+  const js = `(() => {
+    const bin = atob(\`${b64}\`);
+    const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+    const txt = new TextDecoder("utf-8").decode(bytes);
+    const el = document.getElementById("textInput");
+    if(!el) return {ok:false};
+    el.value = txt;
+    el.dispatchEvent(new Event("input",{bubbles:true}));
+    el.dispatchEvent(new Event("change",{bubbles:true}));
+    return {ok:true,len:txt.length,preview:txt.slice(0,120)};
+  })()`;
   const { stdout } = await run("browseros-cli", ["eval", "--page", String(pageId), js]);
   return parseJsonFromOutput(stdout);
 }

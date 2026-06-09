@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -18,9 +18,9 @@ if str(AIRFLOW_ROOT) not in sys.path:
     sys.path.insert(0, str(AIRFLOW_ROOT))
 
 from lib.common import build_run_root, build_slot_dir, get_page_airflow_defaults, get_page_airflow_schedule, get_page_runtime, parse_target_requests, send_batch_start, send_batch_summary  # noqa: E402
-from lib.page_flows import (  # noqa: E402
+from lib.flows.page3_dragon_cinema import (  # noqa: E402
     page3_final_render,
-    page3_pick_content,
+    page3_generate_dragon_package,
     page3_scene_a,
     page3_scene_b,
     page3_telegram_slot,
@@ -39,7 +39,7 @@ AIRFLOW_SCHEDULE = get_page_airflow_schedule(PAGE_KEY)
 
 @dag(
     dag_id="page3_dragon_cinema_manual",
-    description="Page 3 daily run with visible scene A, scene B, final render, upload, and Telegram steps.",
+    description="Page 3 daily run with AI dragon package, scene A, scene B, final render, upload, and Telegram steps.",
     schedule=AIRFLOW_SCHEDULE,
     start_date=pendulum.datetime(2026, 6, 1, tz=LOCAL_TZ),
     catchup=False,
@@ -99,7 +99,7 @@ def build_dag():
             return PokeReturnValue(is_done=True, xcom_value=request)
         return PokeReturnValue(is_done=False)
 
-    pick_content = task(task_id="pick_content")(page3_pick_content)
+    generate_dragon_package = task(task_id="generate_dragon_package")(page3_generate_dragon_package)
     scene_a_generate = task(task_id="scene_a_generate")(page3_scene_a)
     scene_b_generate = task(task_id="scene_b_generate")(page3_scene_b)
     final_render = task(task_id="final_render")(page3_final_render)
@@ -116,8 +116,8 @@ def build_dag():
     @task_group(group_id="slot_flow")
     def slot_flow(request: dict):
         gated = wait_previous_slot(request)
-        picked = pick_content(gated)
-        scene_a = scene_a_generate(picked)
+        package = generate_dragon_package(gated)
+        scene_a = scene_a_generate(package)
         scene_b = scene_b_generate(scene_a)
         rendered = final_render(scene_b)
         uploaded = upload_schedule(rendered)
@@ -129,3 +129,4 @@ def build_dag():
 
 
 dag = build_dag()
+

@@ -1,26 +1,31 @@
 @echo off
 setlocal
 
-REM Stop all running AutoVideoAgent page pipelines (page 1/2/3/4)
+REM Stop all running AutoVideoAgent page pipelines (page 1/2/3/4/5)
 REM Usage: double-click or run this .cmd
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command "
 $patterns = @(
-  '*daily_batch_page_female_psychology.cmd*',
-  '*daily_batch_page_daily_desire_facts.cmd*',
-  '*daily_batch_page_dragon_cinema.cmd*',
-  '*daily_batch_page_page4_relationship.cmd*',
-  '*run_task_page4_relationship.ps1*',
-  '*job_runner.py*--page female_psychology*',
-  '*job_runner.py*--page daily_desire_facts*',
-  '*job_runner.py*--page dragon_cinema*',
-  '*job_runner.py*--page page4_relationship*',
-  '*generate_page4_reel.py*',
+  '*airflow*page1_female_psychology_manual*',
+  '*airflow*page2_daily_desire_facts_manual*',
+  '*airflow*page3_dragon_cinema_manual*',
+  '*airflow*page4_relationship_manual*',
+  '*airflow*page5_health_meter_manual*',
   '*prepare_page4_narration_and_scenes.py*',
+  '*render_page4_singlepass.py*',
+  '*grok_health_video_generate.py*',
+  '*validate_health_video.py*',
+  '*dragon_step_scene_a.py*',
+  '*dragon_step_scene_b.py*',
+  '*dragon_step_finalize.py*',
+  '*grok_cli_scene_images_generate.py*',
+  '*speechma_run.ps1*',
+  '*upload_schedule_ui.py*',
   '*tail_latest_events.ps1* -PageKey female_psychology*',
   '*tail_latest_events.ps1* -PageKey daily_desire_facts*',
   '*tail_latest_events.ps1* -PageKey dragon_cinema*',
-  '*tail_latest_events.ps1* -PageKey page4_relationship*'
+  '*tail_latest_events.ps1* -PageKey page4_relationship*',
+  '*tail_latest_events.ps1* -PageKey page5_health_meter*'
 );
 $targets = Get-CimInstance Win32_Process | Where-Object {
   $cmd = [string]$_.CommandLine;

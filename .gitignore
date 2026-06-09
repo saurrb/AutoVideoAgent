@@ -12,6 +12,7 @@ runs/
 logs/
 output/
 archive/
+~$*.xlsx
 *.sqlite3-shm
 *.sqlite3-wal
 airflow/home/

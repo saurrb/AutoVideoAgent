@@ -2,11 +2,43 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+
+def _default_windows_home() -> Path | None:
+    candidates = [
+        Path("/mnt/c/Users/Saurabh"),
+        Path(r"C:\Users\Saurabh"),
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
+
+
+def _default_grok_exe() -> Path:
+    if os.name != "nt":
+        home = _default_windows_home()
+        if home:
+            exe = home / ".grok" / "bin" / "grok.exe"
+            if exe.exists():
+                return exe
+    return Path.home() / ".grok" / "bin" / "grok.exe"
+
+
+def _default_sessions_dir() -> Path:
+    if os.name != "nt":
+        home = _default_windows_home()
+        if home:
+            sessions = home / ".grok" / "sessions"
+            if sessions.exists():
+                return sessions
+    return Path.home() / ".grok" / "sessions"
 
 
 def _split_scene_blocks(prompt_text: str) -> list[str]:
@@ -67,8 +99,8 @@ def _extract_last_frame(ffmpeg: Path, video_path: Path, out_png: Path) -> None:
     subprocess.run(cmd, check=False, capture_output=True, text=True)
 
 
-def _gen_prompt(scene_block: str, idx: int, prev_last_frame: Path | None) -> str:
-    scene_rules = (
+def _default_style_rules(duration_seconds: int) -> str:
+    return (
         "STYLE RULES (must apply in this scene):\n"
         "- Hand-drawn doodle neon animation style on a pure black background.\n"
         "- Expressive off-white chalk-marker outlines, imperfect sketch strokes, playful stick-figure characters with exaggerated emotions and gestures.\n"
@@ -92,10 +124,18 @@ def _gen_prompt(scene_block: str, idx: int, prev_last_frame: Path | None) -> str
         "- Resolution 480p\n"
         "- Aspect ratio 9:16\n"
         "- One scene per output video"
+    ).replace("Duration exactly 6 seconds", f"Duration exactly {duration_seconds} seconds")
+
+
+def _gen_prompt(scene_block: str, idx: int, prev_last_frame: Path | None, style_rules: str, duration_seconds: int) -> str:
+    scene_rules = (
+        style_rules.strip()
+        if style_rules.strip()
+        else _default_style_rules(duration_seconds)
     )
     base = (
         "Generate one video scene as MP4. "
-        "Strict output settings: duration 6 seconds, resolution 480p, aspect ratio 9:16. "
+        f"Strict output settings: duration {duration_seconds} seconds, resolution 480p, aspect ratio 9:16. "
         "Keep style and subject continuity with prior scene. "
     )
     if idx == 1 or prev_last_frame is None:
@@ -117,8 +157,10 @@ def main() -> None:
     ap.add_argument("--prompt-file", required=True)
     ap.add_argument("--output-dir", required=True)
     ap.add_argument("--max-scene-seconds", type=int, default=420)
-    ap.add_argument("--grok-exe", default=str(Path.home() / ".grok" / "bin" / "grok.exe"))
-    ap.add_argument("--sessions-dir", default=str(Path.home() / ".grok" / "sessions"))
+    ap.add_argument("--duration-seconds", type=int, default=6)
+    ap.add_argument("--style-rules-file", default="")
+    ap.add_argument("--grok-exe", default="")
+    ap.add_argument("--sessions-dir", default="")
     ap.add_argument(
         "--ffmpeg",
         default=r"C:\Users\Saurabh\Documents\AutoVideoAgent\tools\ffmpeg\ffmpeg-8.1.1-essentials_build\bin\ffmpeg.exe",
@@ -128,8 +170,8 @@ def main() -> None:
     prompt_file = Path(args.prompt_file)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    grok_exe = Path(args.grok_exe)
-    sessions_dir = Path(args.sessions_dir)
+    grok_exe = Path(args.grok_exe) if str(args.grok_exe or "").strip() else _default_grok_exe()
+    sessions_dir = Path(args.sessions_dir) if str(args.sessions_dir or "").strip() else _default_sessions_dir()
     ffmpeg = Path(args.ffmpeg)
 
     if not prompt_file.exists():
@@ -145,12 +187,19 @@ def main() -> None:
     scenes = _split_scene_blocks(text)
     if not scenes:
         raise RuntimeError("No scene blocks found in prompt file.")
+    style_rules = ""
+    if args.style_rules_file:
+        style_path = Path(args.style_rules_file)
+        if not style_path.exists():
+            raise FileNotFoundError(f"Style rules file not found: {style_path}")
+        style_rules = style_path.read_text(encoding="utf-8-sig")
+    duration_seconds = max(1, int(args.duration_seconds))
 
     produced: list[Path] = []
     prev_last_frame: Path | None = None
 
     for i, scene_block in enumerate(scenes, start=1):
-        scene_prompt = _gen_prompt(scene_block, i, prev_last_frame)
+        scene_prompt = _gen_prompt(scene_block, i, prev_last_frame, style_rules, duration_seconds)
         scene_prompt_file = output_dir / f"scene_{i:02d}.prompt.txt"
         scene_prompt_file.write_text(scene_prompt, encoding="utf-8")
 

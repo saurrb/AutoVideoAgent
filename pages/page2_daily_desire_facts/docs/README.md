@@ -1,17 +1,35 @@
 ﻿# Daily Desire Facts Page Workspace
 
 Page key: `daily_desire_facts`
-Page URL: `https://www.facebook.com/profile.php?id=61590209438344`
+Page folder: `pages/page2_daily_desire_facts`
 
-## What to fill next
-- Replace logo in `assets/logo/logo1.png`
-- Add your final background videos in `assets/backgrounds/video/`
-- Update reel content in `content/reel_content_bank.xlsx`
-- Add page Meta config at `secrets/pages/page2_daily_desire_facts/meta_config.json`
+## Active Flow
 
-## Render test
-`python .\\scripts\\create_and_post_reel.py --page daily_desire_facts --dry-run`
+This page is run through Airflow DAG:
 
-## Post live
-`reel_post.cmd fb_api=true daily_desire_facts`
+`page2_daily_desire_facts_manual`
 
+The DAG uses:
+
+- content DB rows loaded from `content/reel_content_bank.xlsx`
+- random generated background images from `assets/backgrounds/generated`
+- page logo from `assets/logo/logo1.png`
+- page music from `assets/music`
+- Meta Business UI scheduling through `pages/automation_tools/meta_ui_schedule`
+
+## Content Reload
+
+After editing the Excel content bank, run:
+
+```cmd
+python C:\Users\Saurabh\Documents\AutoVideoAgent\pages\page2_daily_desire_facts\content\reload_to_db.py
+```
+
+## Manual Airflow Trigger Example
+
+```json
+{
+  "target_dates": ["2026-06-04"],
+  "slots": ["13:00", "17:00"]
+}
+```

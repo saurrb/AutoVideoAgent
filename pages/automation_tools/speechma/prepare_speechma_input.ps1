@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 
 if (-not (Test-Path $ScriptPath)) { throw "Missing ScriptPath: $ScriptPath" }
 
-$raw = Get-Content -Raw -Path $ScriptPath
+$raw = Get-Content -Raw -Encoding UTF8 -Path $ScriptPath
 
 # Convert our internal script format into Speechma-friendly narration text:
 # - Drop markdown headers like "# Hook", "# Script v1 (60s)"
@@ -46,6 +46,17 @@ foreach ($l in $outLines) {
 }
 
 $final = ($collapsed -join "`r`n").Trim()
+
+# Normalize smart punctuation before Speechma receives it. This avoids browser/site
+# encoding edge cases such as em dashes becoming "Ã¢â¬â" in the input box.
+$final = $final `
+  -replace [char]0x2014, '-' `
+  -replace [char]0x2013, '-' `
+  -replace [char]0x2018, "'" `
+  -replace [char]0x2019, "'" `
+  -replace [char]0x201C, '"' `
+  -replace [char]0x201D, '"' `
+  -replace [char]0x2026, '...'
 
 New-Item -ItemType Directory -Force -Path (Split-Path $OutPath -Parent) | Out-Null
 # Write UTF-8 without BOM so Speechma doesn't receive leading "ï»¿".

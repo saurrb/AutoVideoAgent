@@ -83,6 +83,90 @@
                 "18:00",
                 "21:00"
             ]
+        },
+        {
+            "page_key": "page5_health_meter",
+            "enabled": true,
+            "mode": "ui_schedule",
+            "facebook_asset_id": "1142661428928770",
+            "generator_type": "grok_health_meter_video",
+            "content_source_file": "ai_generated_only",
+            "logo_file": "pages/page5_health_meter/assets/logo/logo1.png",
+            "timezone": "Asia/Calcutta",
+            "morning_run_time": "04:00",
+            "schedule_horizon_days": 1,
+            "posting_slots": [
+                "08:00",
+                "11:00",
+                "14:00",
+                "17:00",
+                "20:00",
+                "23:00"
+            ]
+        },
+        {
+            "page_key": "page6_the_dark_theory",
+            "enabled": true,
+            "mode": "ui_schedule",
+            "facebook_asset_id": "1129546023573964",
+            "generator_type": "dark_theory_pipeline",
+            "content_source_file": "ai_generated_only",
+            "logo_file": "pages/page6_the_dark_theory/assets/logo/logo1.png",
+            "timezone": "Asia/Calcutta",
+            "morning_run_time": "06:00",
+            "schedule_horizon_days": 1,
+            "posting_slots": [
+                "09:30",
+                "12:30",
+                "15:30",
+                "18:30",
+                "21:30"
+            ]
+        },
+        {
+            "page_key": "page7_psychological_facts",
+            "enabled": true,
+            "mode": "ui_schedule",
+            "facebook_asset_id": "1037478716125384",
+            "generator_type": "psychological_fact_text_card",
+            "content_source_file": "ai_generated_only",
+            "logo_file": "",
+            "timezone": "Asia/Calcutta",
+            "morning_run_time": "07:00",
+            "schedule_horizon_days": 1,
+            "posting_slots": [
+                "00:00",
+                "02:00",
+                "04:00",
+                "06:00",
+                "08:00",
+                "10:00",
+                "12:00",
+                "14:00",
+                "16:00",
+                "18:00",
+                "20:00",
+                "22:00"
+            ]
+        },
+        {
+            "page_key": "page8_funny_universe",
+            "enabled": true,
+            "mode": "ui_schedule",
+            "facebook_asset_id": "1200269989829997",
+            "generator_type": "funny_universe_grok_animated_cartoon",
+            "content_source_file": "ai_generated_only",
+            "logo_file": "",
+            "timezone": "Asia/Calcutta",
+            "morning_run_time": "08:00",
+            "schedule_horizon_days": 1,
+            "posting_slots": [
+                "09:00",
+                "12:00",
+                "15:00",
+                "18:00",
+                "21:00"
+            ]
         }
     ],
     "job": {

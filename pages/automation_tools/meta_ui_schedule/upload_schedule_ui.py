@@ -11,13 +11,20 @@ from playwright.sync_api import sync_playwright
 
 
 ROOT = Path(__file__).resolve().parents[3]
-SCHEDULER = ROOT / "scripts" / "daily_ui_batch_schedule.py"
+SCHEDULER_CANDIDATES = [
+    ROOT / "scripts" / "legacy" / "daily_ui_batch_schedule.py",
+    ROOT / "scripts" / "daily_ui_batch_schedule.py",
+]
 
 
 def _load_scheduler():
-    spec = importlib.util.spec_from_file_location("daily_ui_batch_schedule", SCHEDULER)
+    scheduler = next((path for path in SCHEDULER_CANDIDATES if path.exists()), SCHEDULER_CANDIDATES[0])
+    if not scheduler.exists():
+        checked = ", ".join(str(path) for path in SCHEDULER_CANDIDATES)
+        raise FileNotFoundError(f"Unable to find Meta UI scheduler module. Checked: {checked}")
+    spec = importlib.util.spec_from_file_location("daily_ui_batch_schedule", scheduler)
     if not spec or not spec.loader:
-        raise RuntimeError(f"Unable to load scheduler module: {SCHEDULER}")
+        raise RuntimeError(f"Unable to load scheduler module: {scheduler}")
     mod = importlib.util.module_from_spec(spec)
     sys.modules["daily_ui_batch_schedule"] = mod
     spec.loader.exec_module(mod)
@@ -71,4 +78,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

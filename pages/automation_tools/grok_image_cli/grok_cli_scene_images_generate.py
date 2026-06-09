@@ -42,7 +42,18 @@ def _default_sessions_dir() -> Path:
 
 
 def _split_scene_blocks(prompt_text: str) -> list[str]:
-    blocks = [b.strip() for b in prompt_text.replace("\r\n", "\n").split("\n\n")]
+    text = prompt_text.replace("\r\n", "\n").strip()
+    # Page 4 prompts intentionally contain many blank lines inside one prompt.
+    # Split by the explicit marker instead of blank lines so each full triptych
+    # prompt stays intact. Generic tools keep the old blank-line behavior.
+    if "PAGE4_TRIPTYCH_PROMPT" in text:
+        parts = []
+        for part in text.split("PAGE4_TRIPTYCH_PROMPT"):
+            part = part.strip()
+            if part:
+                parts.append("PAGE4_TRIPTYCH_PROMPT\n" + part)
+        return parts
+    blocks = [b.strip() for b in text.split("\n\n")]
     return [b for b in blocks if b]
 
 
@@ -89,6 +100,13 @@ def _wait_stable(path: Path, checks: int = 3, interval: float = 1.0, timeout_sec
 
 
 def _scene_prompt(scene_block: str, idx: int) -> str:
+    # Some page pipelines, especially Page 4, pass fully specified prompts with
+    # their own composition/style rules. Do not wrap those with the generic
+    # portrait doodle prompt or it will fight the requested visual format.
+    marker_text = scene_block.upper()
+    if "PAGE4_TRIPTYCH_PROMPT" in marker_text or "LANDSCAPE 16:9" in marker_text:
+        return scene_block.strip() + "\n\nReturn only generated local image path."
+
     rules = (
         "Generate ONE image only.\n"
         "Portrait composition suitable for 9:16 reel framing.\n"

@@ -9,7 +9,7 @@ if command -v curl >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
 else
   echo "[airflow-wsl] installing Linux packages"
   sudo apt-get update
-  sudo apt-get install -y curl python3 python3-venv python3-pip python3-dev build-essential libsqlite3-dev
+  sudo apt-get install -y curl python3 python3-venv python3-pip python3-dev build-essential libsqlite3-dev graphviz
 fi
 
 if ! command -v uv >/dev/null 2>&1; then
@@ -37,7 +37,7 @@ CONSTRAINT="https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/
 
 echo "[airflow-wsl] installing Airflow 2.10.5 for Python $PYVER"
 python -m pip install "apache-airflow==2.10.5" --constraint "$CONSTRAINT"
-python -m pip install openpyxl playwright requests pyyaml
+python -m pip install openpyxl playwright requests pyyaml pillow graphviz
 
 airflow db migrate
 airflow users create \

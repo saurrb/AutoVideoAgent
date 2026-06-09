@@ -22,12 +22,9 @@ def _default_ffmpeg(project_root: Path) -> Path:
 
 
 def _resolve_state_db_path(project_root: Path, page_key: str) -> Path:
-    page_db = project_root / "pages" / page_key / "data" / "state.sqlite3"
-    legacy_db = project_root / "data" / "v2" / "state.sqlite3"
-    if (not page_db.exists()) and legacy_db.exists():
-        page_db.parent.mkdir(parents=True, exist_ok=True)
-        page_db.write_bytes(legacy_db.read_bytes())
-    return page_db
+    db_path = project_root / "data" / "v2" / "state.sqlite3"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    return db_path
 
 
 def _build_reel_spec(page_key: str, cfg: dict, batch) -> ReelSpec:
@@ -234,7 +231,7 @@ def cmd_render(args: argparse.Namespace) -> None:
     run_dir = project_root / "runs" / datetime.now().strftime("%Y-%m-%d") / args.page / run_id
     stem = f"reel_{args.page}_{batch.batch_key}"
     ffmpeg_exe = Path(args.ffmpeg).resolve() if args.ffmpeg else _default_ffmpeg(project_root)
-    ass_template = project_root / "scripts" / "reel_template.ass"
+    ass_template = project_root / "scripts" / "templates" / "reel_template.ass"
     bg_video_path = _resolve_background_video(project_root, args.page, cfg)
     _track_asset_use(conn, args.page, bg_video_path, "background")
     _track_asset_use(conn, args.page, chosen_audio, "audio")

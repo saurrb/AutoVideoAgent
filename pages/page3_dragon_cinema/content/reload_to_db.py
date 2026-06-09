@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import subprocess
 import sys
@@ -11,7 +11,7 @@ ROOT = HERE.parents[2]
 def main() -> None:
     cmd = [
         sys.executable,
-        str(ROOT / "scripts" / "reload_page_content_to_db.py"),
+        str(ROOT / "scripts" / "db" / "reload_page_content_to_db.py"),
         "--page",
         "dragon_cinema",
         "--xlsx",
@@ -26,3 +26,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

@@ -9,6 +9,36 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+def _candidate_grok_paths() -> list[Path]:
+    home = Path.home()
+    return [
+        home / ".grok" / "bin" / "grok.exe",
+        Path("/mnt/c/Users/Saurabh/.grok/bin/grok.exe"),
+        Path(r"C:\Users\Saurabh\.grok\bin\grok.exe"),
+    ]
+
+
+def _candidate_session_paths() -> list[Path]:
+    home = Path.home()
+    return [
+        home / ".grok" / "sessions",
+        Path("/mnt/c/Users/Saurabh/.grok/sessions"),
+        Path(r"C:\Users\Saurabh\.grok\sessions"),
+    ]
+
+
+def _resolve_existing(path_text: str | None, candidates: list[Path], label: str) -> Path:
+    if path_text:
+        path = Path(path_text)
+        if path.exists():
+            return path
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    checked = "\n".join(str(candidate) for candidate in candidates)
+    raise FileNotFoundError(f"{label} missing. Checked:\n{checked}")
+
+
 def _find_newest_image(sessions_dir: Path, since_ts: float) -> Path | None:
     if not sessions_dir.exists():
         return None
@@ -60,12 +90,10 @@ def main() -> None:
     prompt_file = Path(args.prompt_file)
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    grok_exe = Path(args.grok_exe)
-    sessions_dir = Path(args.sessions_dir)
+    grok_exe = _resolve_existing(args.grok_exe, _candidate_grok_paths(), "Grok CLI")
+    sessions_dir = _resolve_existing(args.sessions_dir, _candidate_session_paths(), "Grok sessions directory")
     if not prompt_file.exists():
         raise FileNotFoundError(f"Prompt file missing: {prompt_file}")
-    if not grok_exe.exists():
-        raise FileNotFoundError(f"Grok CLI missing: {grok_exe}")
 
     prompt = prompt_file.read_text(encoding="utf-8-sig").strip()
     wrapped = (
@@ -103,7 +131,9 @@ def main() -> None:
         raise RuntimeError(f"Grok image generation failed.\nSTDOUT:\n{out[:1200]}\nSTDERR:\n{err[:1200]}")
 
     out_img = out_dir / f"grok_image_{datetime.now().strftime('%Y%m%d_%H%M%S')}{found.suffix.lower()}"
-    shutil.copy2(found, out_img)
+    # WSL can fail copying Windows file timestamps from Grok's session folder.
+    # Copy bytes only; fresh metadata is recorded in the done manifest below.
+    shutil.copyfile(found, out_img)
     event = {
         "status": "ok",
         "mode": "cli_image",
@@ -117,4 +147,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

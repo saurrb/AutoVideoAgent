@@ -1,32 +1,48 @@
-# Page 4 Relationship (Redesigned)
+﻿# Page 4 Relationship
 
-This page is rebuilt with a staged pipeline architecture and uses shared tools from:
+Page key: `page4_relationship`
+Page folder: `pages/page4_relationship`
+
+## Active Flow
+
+This page is run through Airflow DAG:
+
+`page4_relationship_manual`
+
+The old Page 4 prototype was removed after the redesigned Airflow flow became active.
+
+## Pipeline
+
+1. `generate_content`: create narration, caption, and hashtags.
+2. `speechma_voice`: generate Speechma Pro MP3 voice.
+3. `grok_triptych_images`: generate 3-5 landscape triptych images from Grok CLI.
+4. `render_panning_reel`: merge all images side by side, pan across the full story strip, and render final 720x1280 reel with narration, 10% background music, captions, and logo.
+5. `upload_schedule`: upload/schedule through Meta Business UI.
+6. `telegram_notify`: send success/failure update.
+
+## Shared Tools
+
+Page 4 uses shared tools from:
+
 `C:\Users\Saurabh\Documents\AutoVideoAgent\pages\automation_tools`
 
-## Archived old implementation
-Previous implementation is archived at:
-`C:\Users\Saurabh\Documents\AutoVideoAgent\pages\page4_relationship_old_20260602_003021`
+Important tools:
 
-## New architecture
-1. Stage 1 (`prepare`):
-   - Generate narration/caption/hashtags
-   - Generate Speechma voice
-   - Build scene prompt text/json
-2. Stage 2 (`generate`):
-   - Generate scene images via Grok CLI tool
-3. Stage 3 (`render`):
-   - Single-pass final render
-4. Stage outputs:
-   - `state/01_prepare.json`
-   - `state/02_generate.json`
-   - `state/03_render.json`
-   - final manifest `page4_<id>.manifest.json`
+- `speechma/speechma_run.ps1`
+- `grok_image_cli/grok_cli_scene_images_generate.py`
+- `meta_ui_schedule/upload_schedule_ui.py`
 
-## Main entry
-`python C:\Users\Saurabh\Documents\AutoVideoAgent\pages\page4_relationship\scripts\page4_pipeline.py`
+## Outputs
 
-## Compatibility
-Global scheduler/job-runner still calls:
-`python C:\Users\Saurabh\Documents\AutoVideoAgent\scripts\generate_page4_reel.py`
+Airflow run outputs are written under:
 
-That wrapper now delegates to the new pipeline.
+`C:\Users\Saurabh\Documents\AutoVideoAgent\runs\airflow_ui\page4_relationship\...`
+
+## Manual Airflow Trigger Example
+
+```json
+{
+  "target_dates": ["2026-06-04"],
+  "slots": ["09:00", "12:00"]
+}
+```

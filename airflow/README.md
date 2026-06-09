@@ -1,8 +1,8 @@
-# AutoVideoAgent Airflow UI
+﻿# AutoVideoAgent Airflow UI
 
-This folder contains the local Airflow workspace for `AutoVideoAgent`.
+This folder contains the WSL-backed Airflow workspace for `AutoVideoAgent`.
 
-Recommended runtime: WSL2 Ubuntu. The Windows UI-only setup remains here for reference, but WSL2 is the intended path because Airflow's scheduler runs reliably on Linux.
+Airflow is now the production orchestrator for all six pages. The previous Windows-native Airflow experiment and Page 4-only launchers have been removed.
 
 ## DAGs
 
@@ -10,32 +10,34 @@ Recommended runtime: WSL2 Ubuntu. The Windows UI-only setup remains here for ref
 - `page2_daily_desire_facts_manual`
 - `page3_dragon_cinema_manual`
 - `page4_relationship_manual`
+- `page5_health_meter_manual`
+- `page6_the_dark_theory_manual`
 
-Each DAG is one Facebook page. Each manual trigger expands into one mapped task chain per requested date/slot.
+Each DAG is one Facebook page. Each trigger expands into one mapped task chain per requested date/slot.
 
 ## Trigger Input
 
-Use this JSON shape in Airflow's `Trigger DAG w/ config` box:
+Use this JSON in Airflow's `Trigger DAG w/ config` box:
 
 ```json
 {
-  "target_dates": ["2026-06-03"],
+  "target_dates": ["2026-06-04"],
   "slots": ["10:30", "12:30"]
 }
 ```
 
-You can pass multiple dates and multiple slots:
+Multiple dates and multiple slots are supported:
 
 ```json
 {
-  "target_dates": ["2026-06-03", "2026-06-04"],
+  "target_dates": ["2026-06-04", "2026-06-05"],
   "slots": ["09:00", "12:00", "21:00"]
 }
 ```
 
-If either field is omitted, the DAG uses tomorrow's date and that page's default slots from:
+If either field is omitted, the DAG uses its defaults from:
 
-`C:\Users\Saurabh\Documents\AutoVideoAgent\control\automation_runtime.json`
+`C:\Users\Saurabh\Documents\AutoVideoAgent\control\airflow_schedule_control.json`
 
 ## Visible Steps
 
@@ -50,7 +52,7 @@ Page 1 and Page 2:
 Page 3:
 
 - `build_date_slot_requests`
-- `pick_content`
+- `generate_dragon_package`
 - `scene_a_generate`
 - `scene_b_generate`
 - `final_render`
@@ -58,6 +60,27 @@ Page 3:
 - `telegram_notify`
 
 Page 4:
+
+- `build_date_slot_requests`
+- `generate_content`
+- `speechma_voice`
+- `grok_scene_images`
+- `render_video`
+- `upload_schedule`
+- `telegram_notify`
+
+Page 5:
+
+- `build_date_slot_requests`
+- `generate_health_concept`
+- `build_grok_image_prompt`
+- `grok_generate_image`
+- `speechma_voice`
+- `render_video`
+- `upload_schedule`
+- `telegram_notify`
+
+Page 6:
 
 - `build_date_slot_requests`
 - `generate_content`
@@ -81,38 +104,10 @@ After Ubuntu completes first-time setup, install Airflow inside WSL:
 C:\Users\Saurabh\Documents\AutoVideoAgent\airflow\setup_airflow_wsl.cmd
 ```
 
-Start the WSL-backed Airflow webserver and scheduler:
+Start Airflow:
 
 ```cmd
 C:\Users\Saurabh\Documents\AutoVideoAgent\airflow\start_airflow_wsl.cmd
-```
-
-Stop the WSL-backed Airflow processes:
-
-```cmd
-C:\Users\Saurabh\Documents\AutoVideoAgent\airflow\stop_airflow_wsl.cmd
-```
-
-The UI still opens from Windows:
-
-`http://127.0.0.1:8080`
-
-Default login:
-
-`admin / admin`
-
-## Windows UI Fallback
-
-Initialize:
-
-```cmd
-C:\Users\Saurabh\Documents\AutoVideoAgent\airflow\init_airflow_page4.cmd
-```
-
-Start Windows UI only:
-
-```cmd
-C:\Users\Saurabh\Documents\AutoVideoAgent\airflow\start_airflow_page4.cmd
 ```
 
 Open UI:
@@ -121,11 +116,19 @@ Open UI:
 C:\Users\Saurabh\Documents\AutoVideoAgent\airflow\open_airflow_ui.cmd
 ```
 
-Stop UI:
+Stop Airflow:
 
 ```cmd
-C:\Users\Saurabh\Documents\AutoVideoAgent\airflow\stop_airflow_page4.cmd
+C:\Users\Saurabh\Documents\AutoVideoAgent\airflow\stop_airflow_wsl.cmd
 ```
+
+UI:
+
+`http://127.0.0.1:8080`
+
+Default login:
+
+`admin / admin`
 
 ## Outputs
 

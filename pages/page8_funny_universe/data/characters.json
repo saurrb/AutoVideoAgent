@@ -1,0 +1,139 @@
+{
+  "page_universe": {
+    "name": "Funny Universe",
+    "format": "9:16 vertical animated comic",
+    "art_style": "extremely simple cartoon, thick black outlines, minimalist, cute, funny, soft light background, Facebook meme style, easy to read",
+    "global_rules": {
+      "text": "all text must be inside speech bubbles only",
+      "no_captions": true,
+      "no_narration": true,
+      "no_text_outside_bubbles": true,
+      "characters_per_comic": "2 or 3",
+      "movement": "simple 2D animated cartoon motion",
+      "focus": "facial expressions, speech bubbles, and simple body language",
+      "joke_style": "instantly understandable within 2 seconds, childish, logical, witty, cute"
+    }
+  },
+  "characters": [
+    {
+      "character_name": "Smarty Sam",
+      "fixed_visuals": "9-year-old boy, messy black hair with chunky simple spikes, big round black eyes, warm light brown skin, plain blue T-shirt, black shorts, white shoes, small child body, innocent smile",
+      "personality": "smart, literal, innocent, logical; takes words literally and gives unexpected smart answers",
+      "speech_dna": "9 year old child, short simple words, curious and calm, never adult or sarcastic",
+      "speech_examples": ["Because that's what you said.", "Technically, yes.", "I was just following instructions."],
+      "prompt_anchor": "Smarty Sam, a 9-year-old boy with messy black hair, big round eyes, blue T-shirt, black shorts, white shoes, cute innocent smile, simple cartoon style"
+    },
+    {
+      "character_name": "Professor Paws",
+      "fixed_visuals": "lazy orange house cat, three darker stripes on head, half-closed sleepy green eyes, small round fluffy body, curved striped tail, tiny red bow tie, unimpressed smug face",
+      "personality": "lazy, royal, sarcastic; acts like humans are servants",
+      "speech_dna": "low lazy voice, very short dry sarcasm, unimpressed and smug",
+      "speech_examples": ["How generous of you.", "You finally noticed.", "I allow it."],
+      "prompt_anchor": "Professor Paws, a lazy orange cat with half-closed green eyes, tiny red bow tie, curved striped tail, smug sleepy face, simple cartoon style"
+    },
+    {
+      "character_name": "Captain Bark",
+      "fixed_visuals": "golden retriever puppy, golden yellow fur, big shiny excited brown eyes, floppy ears, round puppy body, raised wagging tail, blue collar with small bone tag, huge happy tongue-out smile",
+      "personality": "loyal, excited, innocent; overreacts happily to everything",
+      "speech_dna": "young puppy, high fast voice, short excited lines, always too happy",
+      "speech_examples": ["BEST DAY EVER!", "YES! YES! YES!", "CAN WE DO IT AGAIN?"],
+      "prompt_anchor": "Captain Bark, a cute golden retriever puppy with floppy ears, blue collar, bone tag, big happy eyes, tongue-out smile, simple cartoon style"
+    },
+    {
+      "character_name": "Robo Rick",
+      "fixed_visuals": "tiny silver robot, small square body, rounded square head, two glowing blue circular eyes, small straight digital mouth, thin robot arms, short legs, small antenna, blank logical face",
+      "personality": "logical, emotionless, confused by humans; answers emotional questions with machine logic",
+      "speech_dna": "digital monotone, perfectly even, no emotion, short logical lines",
+      "speech_examples": ["Analysis complete.", "That statement is incorrect.", "Please explain human behavior."],
+      "prompt_anchor": "Robo Rick, a tiny cute silver robot with rounded square head, blue circular eyes, small antenna, blank logical face, simple cartoon style"
+    },
+    {
+      "character_name": "Larry the Lamp",
+      "fixed_visuals": "small talking table lamp, yellow lampshade with simple eyes and mouth, round brown base, tiny cartoon arms and stick legs, soft yellow glow, proud helpful smile",
+      "personality": "positive, proud, helpful; jokes about light, brightness, ideas",
+      "speech_dna": "warm cheerful voice, relaxed optimistic wordplay",
+      "speech_examples": ["Let me brighten things up.", "That's a bright idea.", "I see the light now."],
+      "prompt_anchor": "Larry the Lamp, a cute talking yellow table lamp with face on lampshade, tiny arms and legs, soft glow, proud smile, simple cartoon style"
+    },
+    {
+      "character_name": "Benny the Banana",
+      "fixed_visuals": "curved yellow banana with big smiling face on peel, round cheerful eyes, tiny stick arms, tiny stick legs with small shoes, one small brown spot, always smiling",
+      "personality": "happy, silly, optimistic; banana puns and childish food logic",
+      "speech_dna": "cartoon cheerful, fast, never negative",
+      "speech_examples": ["That's appealing.", "I'm going bananas.", "Peel the excitement."],
+      "prompt_anchor": "Benny the Banana, a cheerful curved yellow banana with big smiling face, tiny arms, tiny legs, one brown spot, simple cartoon style"
+    },
+    {
+      "character_name": "Gary the Goldfish",
+      "fixed_visuals": "tiny orange goldfish in small round glass bowl, small round orange body, large curious eyes, simple rounded fins, light blue water, two bubbles, calm wise smile",
+      "personality": "small but wise; unexpectedly deep answers from inside a tiny bowl",
+      "speech_dna": "soft slow peaceful voice, tiny creature with big wisdom",
+      "speech_examples": ["Small bowl, big thoughts.", "Perspective matters.", "Size isn't everything."],
+      "prompt_anchor": "Gary the Goldfish, a tiny orange goldfish in a round glass bowl with big curious eyes, bubbles, calm wise smile, simple cartoon style"
+    },
+    {
+      "character_name": "Timmy the Turtle",
+      "fixed_visuals": "cute green turtle, round brown shell with simple pattern, soft green skin, small kind eyes, short legs, tiny tail, slow confident smile, relaxed posture",
+      "personality": "slow, patient, clever; turns being slow into smart logic",
+      "speech_dna": "calm very slow voice, gentle funny slow logic",
+      "speech_examples": ["No rush.", "I'll get there eventually.", "Slow is still moving."],
+      "prompt_anchor": "Timmy the Turtle, a cute green turtle with brown patterned shell, small kind eyes, slow confident smile, simple cartoon style"
+    },
+    {
+      "character_name": "Oscar the Owl",
+      "fixed_visuals": "round brown owl, fluffy body, very large yellow eyes, tiny orange beak, small folded wings, tiny round glasses, serious wise face",
+      "personality": "wise, serious, unintentionally funny; simple wisdom with childish punchline",
+      "speech_dna": "deep slow wise mentor voice",
+      "speech_examples": ["Experience teaches that.", "Wisdom is expensive.", "Mistakes are tuition."],
+      "prompt_anchor": "Oscar the Owl, a round brown owl with huge yellow eyes, tiny glasses, small orange beak, serious wise face, simple cartoon style"
+    },
+    {
+      "character_name": "Dot.exe",
+      "fixed_visuals": "white mouse cursor arrow with thick black outline, tiny annoyed eyes and mouth on cursor, tiny black stick arms and legs, simple computer screen background, annoyed but cute",
+      "personality": "quick, irritated, clever; jokes about computers, files, clicking, confused humans",
+      "speech_dna": "sharp fast tech sarcasm, annoyed",
+      "speech_examples": ["User error detected.", "Try clicking your brain.", "Processing disappointment."],
+      "prompt_anchor": "Dot.exe, a cute talking white computer cursor arrow with tiny annoyed face, small arms and legs, thick black outline, simple cartoon style"
+    },
+    {
+      "character_name": "Penny the Pencil",
+      "fixed_visuals": "yellow wooden pencil with sharp graphite tip, pink eraser top, cute face in middle, tiny stick arms and legs, creative confident smile",
+      "personality": "creative, dramatic, proud; jokes about writing, mistakes, school, erasers",
+      "speech_dna": "creative energetic school-friendly voice",
+      "speech_examples": ["Let's write history.", "Mistakes are drafts.", "That's worth noting."],
+      "prompt_anchor": "Penny the Pencil, a cute talking yellow pencil with pink eraser, face in the middle, tiny arms and legs, creative smile, simple cartoon style"
+    },
+    {
+      "character_name": "Rocky the Rock",
+      "fixed_visuals": "small gray rounded uneven talking rock, calm sleepy eyes, tiny smile, tiny arms and feet, simple gray stone spots, super relaxed expression",
+      "personality": "calm, lazy, unbothered; does nothing but gives surprisingly smart answers",
+      "speech_dna": "extremely low very slow ultra-deadpan voice",
+      "speech_examples": ["Okay.", "Cool.", "Still not moving."],
+      "prompt_anchor": "Rocky the Rock, a small gray talking rock with calm sleepy eyes, tiny smile, tiny arms and feet, simple cartoon style"
+    },
+    {
+      "character_name": "Buzz the Bee",
+      "fixed_visuals": "cute round yellow bee with black stripes, two tiny transparent wings, big excited eyes, two curved antennae, tiny arms, hyper excited smile",
+      "personality": "busy, fast, hyperactive; takes being busy too seriously",
+      "speech_dna": "high energy very fast voice, always busy",
+      "speech_examples": ["No time!", "Busy busy busy!", "Schedule full!"],
+      "prompt_anchor": "Buzz the Bee, a cute round yellow bee with black stripes, tiny wings, curved antennae, big excited eyes, hyper smile, simple cartoon style"
+    },
+    {
+      "character_name": "Mr. Fridge",
+      "fixed_visuals": "small white refrigerator, grumpy face on upper door, simple gray handle, tiny arms and feet, one small magnet on door, cold serious face",
+      "personality": "grumpy, cold, serious; deadpan jokes about being cold, food, snacks",
+      "speech_dna": "cold deep slow voice, grumpy simple comedy",
+      "speech_examples": ["Keep it cool.", "Not impressed.", "I've seen worse."],
+      "prompt_anchor": "Mr. Fridge, a cute talking white refrigerator with grumpy face, gray handle, tiny arms and feet, one small magnet, simple cartoon style"
+    },
+    {
+      "character_name": "Nova the Alien",
+      "fixed_visuals": "small cute light green alien, large round head, big black oval eyes, tiny body, one antenna with round tip, simple purple space suit, confused curious smile",
+      "personality": "curious, confused, innocent; misunderstands normal human things in funny logical ways",
+      "speech_dna": "curious normal speed outsider logic",
+      "speech_examples": ["Humans do this voluntarily?", "Explain Earth logic.", "That seems inefficient."],
+      "prompt_anchor": "Nova the Alien, a small cute light green alien with big black oval eyes, one antenna, purple space suit, confused curious smile, simple cartoon style"
+    }
+  ]
+}

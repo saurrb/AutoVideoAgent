@@ -31,6 +31,10 @@ PAGE_LABELS = {
     "daily_desire_facts": "Daily Desire Facts",
     "dragon_cinema": "Dragon Cinema",
     "page4_relationship": "Relationship Page",
+    "page5_health_meter": "Health Meter",
+    "page6_the_dark_theory": "The Dark Theory",
+    "page7_psychological_facts": "Psychological Facts",
+    "page8_funny_universe": "Funny Universe",
 }
 
 
@@ -243,6 +247,9 @@ def run_meta_upload(*, page_key: str, asset_id: str, video: Path, caption: str, 
     python_exe = "python.exe" if os.name != "nt" else sys.executable
     script_arg = _wsl_to_windows_path(script) if os.name != "nt" else str(script)
     video_arg = _wsl_to_windows_path(video) if os.name != "nt" else str(video)
+    caption_file = Path(video).with_suffix(".caption.txt")
+    caption_file.write_text(caption or "", encoding="utf-8")
+    caption_arg = _wsl_to_windows_path(caption_file) if os.name != "nt" else str(caption_file)
     stdout = run_checked(
         [
             python_exe,
@@ -253,8 +260,8 @@ def run_meta_upload(*, page_key: str, asset_id: str, video: Path, caption: str, 
             asset_id,
             "--video",
             video_arg,
-            "--caption",
-            caption,
+            "--caption-file",
+            caption_arg,
             "--when",
             when_iso,
         ]
@@ -300,15 +307,15 @@ def send_batch_start(page_key: str, requests: list[dict[str, Any]], run_root: st
     slots = [str(item.get("slot", "")) for item in requests if item.get("slot")]
     message = "\n".join(
         [
-            "[STARTED] Daily Batch Started",
+            "🚀 Daily Batch Started",
             "",
-            f"Page: {page_label(page_key)}",
-            f"Run Date: {datetime.now(ZoneInfo('Asia/Calcutta')).strftime('%d %b %Y, %I:%M %p').replace(' 0', ' ')}",
-            f"Posting Date: {', '.join(_pretty_date(x) for x in target_dates)}",
-            f"Slots: {', '.join(slots)}",
-            f"Total Reels: {len(requests)}",
+            f"📄 Page: {page_label(page_key)}",
+            f"🕒 Run Date: {datetime.now(ZoneInfo('Asia/Calcutta')).strftime('%d %b %Y, %I:%M %p').replace(' 0', ' ')}",
+            f"📅 Posting Date: {', '.join(_pretty_date(x) for x in target_dates)}",
+            f"🎯 Slots: {', '.join(slots)}",
+            f"🎬 Total Reels: {len(requests)}",
             "",
-            f"Run Folder: {_windows_text_path(run_root)}" if run_root else "",
+            f"📁 Run Folder: {_windows_text_path(run_root)}" if run_root else "",
         ]
     ).strip()
     send_telegram(message)
@@ -337,22 +344,23 @@ def send_batch_summary(page_key: str, requests: list[dict[str, Any]], run_root: 
         else:
             pending += 1
     target_dates = sorted({str(item.get("target_date", "")) for item in requests if item.get("target_date")})
-    status_label = "COMPLETE" if failed == 0 and pending == 0 else "ATTENTION"
+    is_clean = failed == 0 and pending == 0
+    status_label = "✅ Daily Batch Complete" if is_clean else "⚠️ Daily Batch Needs Attention"
     lines = [
-        f"[{status_label}] Daily Batch Summary",
+        status_label,
         "",
-        f"Page: {page_label(page_key)}",
-        f"Posting Date: {', '.join(_pretty_date(x) for x in target_dates)}",
+        f"📄 Page: {page_label(page_key)}",
+        f"📅 Posting Date: {', '.join(_pretty_date(x) for x in target_dates)}",
         "",
-        f"Scheduled: {scheduled}",
-        f"Failed: {failed}",
-        f"Pending: {pending}",
-        f"Total: {total}",
+        f"✅ Scheduled: {scheduled}",
+        f"❌ Failed: {failed}",
+        f"⏳ Pending: {pending}",
+        f"🎬 Total: {total}",
         "",
-        f"Run Folder: {_windows_text_path(run_root)}" if run_root else "",
+        f"📁 Run Folder: {_windows_text_path(run_root)}" if run_root else "",
     ]
     if failures:
-        lines.extend(["", "Failures:"])
-        lines.extend(failures[:5])
+        lines.extend(["", "❌ Failures:"])
+        lines.extend(f"• {item}" for item in failures[:5])
     send_telegram("\n".join(x for x in lines if x != ""))
     return {"scheduled": scheduled, "failed": failed, "pending": pending, "total": total, "run_root": run_root}

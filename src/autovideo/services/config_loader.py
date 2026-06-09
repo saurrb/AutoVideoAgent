@@ -14,6 +14,13 @@ class PageConfig:
     profile: dict[str, Any]
 
 
+PAGE_CONFIG_ALIASES = {
+    "female_psychology": "page1_female_psychology",
+    "daily_desire_facts": "page2_daily_desire_facts",
+    "dragon_cinema": "page3_dragon_cinema",
+}
+
+
 def _read_yaml(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"Config file not found: {path}")
@@ -50,7 +57,11 @@ def _validate_config(page_key: str, cfg: dict[str, Any]) -> None:
 
 def load_page_config(project_root: Path, page_key: str) -> PageConfig:
     global_path = project_root / "configs" / "global.yaml"
-    page_path = project_root / "configs" / "pages" / f"{page_key}.yaml"
+    config_key = PAGE_CONFIG_ALIASES.get(page_key, page_key)
+    page_path = project_root / "configs" / "pages" / f"{config_key}.yaml"
+    legacy_page_path = project_root / "configs" / "pages" / f"{page_key}.yaml"
+    if not page_path.exists() and legacy_page_path.exists():
+        page_path = legacy_page_path
     global_cfg = _read_yaml(global_path) if global_path.exists() else {}
     page_cfg = _read_yaml(page_path)
     preset_name = page_cfg.get("style_preset", global_cfg.get("style_preset", "default_style"))

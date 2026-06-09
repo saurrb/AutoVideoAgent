@@ -1,0 +1,16 @@
+STYLE RULES (must apply in this scene):
+- Bright Funny Universe animated cartoon style, simple clean 2D vector look.
+- Extremely simple cartoon characters with thick black outlines, flat cheerful colors, soft light background, minimalist Facebook meme aesthetic.
+- The locked main character must match the provided visual description exactly and stay visually consistent for the full video.
+- Supporting characters may be any simple funny cartoon humans, animals, robots, aliens, or talking objects.
+- Speech bubble text only. No captions, no narration text, no labels outside bubbles, no watermark, no logo.
+- Large readable speech bubbles with short dialogue, centered safely inside the vertical frame.
+- Cute expressive faces, simple body language, tiny bounce motions, blinks, arm gestures, reaction poses, and playful timing.
+- Family-friendly clean humor, instantly understandable, no adult content, no offensive stereotypes.
+- Smooth simple 2D animation, not photorealistic, not 3D, not anime, not realistic humans.
+
+VIDEO OUTPUT RULES:
+- Duration exactly 10 seconds
+- Resolution 480p
+- Aspect ratio 9:16
+- One scene per output video

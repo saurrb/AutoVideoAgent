@@ -60,6 +60,62 @@
         "18:00",
         "21:00"
       ]
+    },
+    "page5_health_meter": {
+      "enabled": true,
+      "daily_run_time": "04:00",
+      "target_day_offset": 1,
+      "posting_slots": [
+        "08:00",
+        "11:00",
+        "14:00",
+        "17:00",
+        "20:00",
+        "23:00"
+      ]
+    },
+    "page6_the_dark_theory": {
+      "enabled": true,
+      "daily_run_time": "06:00",
+      "target_day_offset": 1,
+      "posting_slots": [
+        "09:30",
+        "12:30",
+        "15:30",
+        "18:30",
+        "21:30"
+      ]
+    },
+    "page7_psychological_facts": {
+      "enabled": true,
+      "daily_run_time": "07:00",
+      "target_day_offset": 1,
+      "posting_slots": [
+        "00:00",
+        "02:00",
+        "04:00",
+        "06:00",
+        "08:00",
+        "10:00",
+        "12:00",
+        "14:00",
+        "16:00",
+        "18:00",
+        "20:00",
+        "22:00"
+      ]
+    },
+    "page8_funny_universe": {
+      "enabled": true,
+      "daily_run_time": "08:00",
+      "target_day_offset": 1,
+      "posting_slots": [
+        "09:00",
+        "12:00",
+        "15:00",
+        "18:00",
+        "21:00"
+      ]
     }
   }
 }

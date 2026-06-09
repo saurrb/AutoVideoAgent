@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -18,7 +18,14 @@ if str(AIRFLOW_ROOT) not in sys.path:
     sys.path.insert(0, str(AIRFLOW_ROOT))
 
 from lib.common import build_run_root, build_slot_dir, get_page_airflow_defaults, get_page_airflow_schedule, get_page_runtime, parse_target_requests, send_batch_start, send_batch_summary  # noqa: E402
-from lib.page_flows import page12_prepare_slot, page12_render_slot, page12_telegram_slot, page12_upload_slot  # noqa: E402
+from lib.flows.page1_female_psychology import (  # noqa: E402
+    page1_build_grok_image_prompt,
+    page1_generate_relationship_concept,
+    page1_grok_generate_image,
+    page1_render_dynamic_image_reel,
+    page1_telegram_dynamic_slot,
+    page1_upload_dynamic_slot,
+)
 
 PAGE_KEY = "female_psychology"
 PAGE_CFG = get_page_runtime(PAGE_KEY)
@@ -92,10 +99,12 @@ def build_dag():
             return PokeReturnValue(is_done=True, xcom_value=request)
         return PokeReturnValue(is_done=False)
 
-    prepare_content = task(task_id="prepare_content")(page12_prepare_slot)
-    render_video = task(task_id="render_video")(page12_render_slot)
-    upload_schedule = task(task_id="upload_schedule")(page12_upload_slot)
-    telegram_notify = task(task_id="telegram_notify")(page12_telegram_slot)
+    generate_relationship_concept = task(task_id="generate_relationship_concept")(page1_generate_relationship_concept)
+    build_grok_image_prompt = task(task_id="build_grok_image_prompt")(page1_build_grok_image_prompt)
+    grok_generate_image = task(task_id="grok_generate_image")(page1_grok_generate_image)
+    render_video = task(task_id="render_video")(page1_render_dynamic_image_reel)
+    upload_schedule = task(task_id="upload_schedule")(page1_upload_dynamic_slot)
+    telegram_notify = task(task_id="telegram_notify")(page1_telegram_dynamic_slot)
 
     @task(task_id="daily_end_summary", trigger_rule=TriggerRule.ALL_DONE)
     def daily_end_summary(requests: list[dict]):
@@ -107,8 +116,10 @@ def build_dag():
     @task_group(group_id="slot_flow")
     def slot_flow(request: dict):
         gated = wait_previous_slot(request)
-        prepared = prepare_content(gated)
-        rendered = render_video(prepared)
+        concept = generate_relationship_concept(gated)
+        image_prompt = build_grok_image_prompt(concept)
+        image = grok_generate_image(image_prompt)
+        rendered = render_video(image)
         uploaded = upload_schedule(rendered)
         telegram_notify(uploaded)
 
@@ -118,3 +129,4 @@ def build_dag():
 
 
 dag = build_dag()
+

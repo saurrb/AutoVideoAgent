@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -18,7 +18,7 @@ if str(AIRFLOW_ROOT) not in sys.path:
     sys.path.insert(0, str(AIRFLOW_ROOT))
 
 from lib.common import build_run_root, build_slot_dir, get_page_airflow_defaults, get_page_airflow_schedule, get_page_runtime, parse_target_requests, send_batch_start, send_batch_summary  # noqa: E402
-from lib.page_flows import page12_prepare_slot, page12_render_slot, page12_telegram_slot, page12_upload_slot  # noqa: E402
+from lib.flows.page2_daily_desire_facts import page12_prepare_slot, page12_render_slot, page12_telegram_slot, page12_upload_slot  # noqa: E402
 
 PAGE_KEY = "daily_desire_facts"
 PAGE_CFG = get_page_runtime(PAGE_KEY)
@@ -118,3 +118,4 @@ def build_dag():
 
 
 dag = build_dag()
+

@@ -220,10 +220,12 @@ def _wait_for_grok_event(grok_output_dir: Path, expected_count: int, max_wait_se
 def _image_to_scene_clip(ffmpeg: Path, img: Path, out_mp4: Path, sec: float = 6.0) -> None:
     fps = 30
     frames = int(sec * fps)
+    # Landscape scene art should feel like a camera pan, not a zoom push.
+    # Scale to full reel height, then move the 720px crop window across the wide image.
     vf = (
-        "scale=720:1280:force_original_aspect_ratio=increase,"
-        "crop=720:1280,"
-        f"zoompan=z='min(1.12,zoom+0.0008)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s=720x1280:fps={fps},"
+        "scale=-1:1280,"
+        f"crop=720:1280:x='if(gte(iw,720),(iw-720)*n/{max(1, frames - 1)},0)':y=0,"
+        f"fps={fps},"
         "format=yuv420p"
     )
     _run(
@@ -249,6 +251,23 @@ def _image_to_scene_clip(ffmpeg: Path, img: Path, out_mp4: Path, sec: float = 6.
         ]
     )
 
+def _merge_images_side_by_side(ffmpeg: Path, images: list[Path], out_image: Path) -> None:
+    if not images:
+        raise RuntimeError("No images supplied for merged story strip.")
+    cmd: list[str] = [str(ffmpeg), "-y"]
+    for img in images:
+        cmd.extend(["-i", str(img)])
+    filters: list[str] = []
+    for idx, _img in enumerate(images):
+        filters.append(
+            f"[{idx}:v]scale=1280:720:force_original_aspect_ratio=decrease,"
+            f"pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1[v{idx}]"
+        )
+    hstack_inputs = "".join(f"[v{idx}]" for idx in range(len(images)))
+    filter_complex = ";".join(filters) + f";{hstack_inputs}hstack=inputs={len(images)}[out]"
+    cmd.extend(["-filter_complex", filter_complex, "-map", "[out]", "-frames:v", "1", str(out_image)])
+    _run(cmd)
+
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Page4 single-pass render with event-driven scene readiness")
@@ -267,6 +286,7 @@ def main() -> None:
         "--music-dir",
         default=r"C:\Users\Saurabh\Documents\AutoVideoAgent\pages\page4_relationship\assets\music",
     )
+    ap.add_argument("--music-volume", type=float, default=0.10, help="Background music volume relative to narration.")
     ap.add_argument(
         "--logo-path",
         default=r"C:\Users\Saurabh\Documents\AutoVideoAgent\pages\page4_relationship\assets\logo\logo1.png",
@@ -279,7 +299,7 @@ def main() -> None:
     args = ap.parse_args()
 
     manifest_path = Path(args.manifest).resolve()
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
     run_dir = manifest_path.parent
     ffmpeg = Path(args.ffmpeg)
     ffprobe = Path(args.ffprobe)
@@ -287,51 +307,69 @@ def main() -> None:
     grok_output_dir = Path(manifest["grok_output_dir"])
     expected_count = int(manifest.get("scene_count", 1))
     narration_text = Path(manifest.get("narration_txt", "")).read_text(encoding="utf-8-sig").strip() if manifest.get("narration_txt") else ""
+    voice_seconds = _probe_seconds(ffprobe, voice_mp3)
+    per_scene_seconds = 6.0
+    if expected_count > 0 and voice_seconds > 0.01:
+        per_scene_seconds = max(6.0, voice_seconds / expected_count)
 
     scenes = _wait_for_grok_event(grok_output_dir, expected_count, args.max_wait_seconds)
+    image_exts = {".png", ".jpg", ".jpeg", ".webp"}
+    all_images = all(s.suffix.lower() in image_exts for s in scenes)
+    merged_story_strip: Path | None = None
     scene_video_inputs: list[Path] = []
-    for idx, s in enumerate(scenes, start=1):
-        if s.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}:
-            clip = run_dir / f"scene_imgclip_{idx:02d}.mp4"
-            _image_to_scene_clip(ffmpeg, s, clip, sec=6.0)
-            scene_video_inputs.append(clip)
-        else:
-            scene_video_inputs.append(s)
 
-    concat_list = run_dir / "scene_concat_list.txt"
-    concat_lines: list[str] = []
-    for p in scene_video_inputs:
-        safe = _ffmpeg_file_path(p).replace("'", "''")
-        concat_lines.append(f"file '{safe}'\n")
-    concat_list.write_text("".join(concat_lines), encoding="utf-8")
+    if all_images:
+        # Official Page 4 flow: all triptych images are merged side by side,
+        # then one continuous pan plays across the full strip for the entire voice.
+        merged_story_strip = run_dir / f"page4_merged_story_strip_{manifest['item_id']}.jpg"
+        _merge_images_side_by_side(ffmpeg, scenes, merged_story_strip)
+        concat_video = run_dir / f"page4_merged_strip_pan_{manifest['item_id']}.mp4"
+        _image_to_scene_clip(ffmpeg, merged_story_strip, concat_video, sec=max(1.0, voice_seconds))
+        scene_video_inputs.append(concat_video)
+    else:
+        for idx, s in enumerate(scenes, start=1):
+            if s.suffix.lower() in image_exts:
+                clip = run_dir / f"scene_imgclip_{idx:02d}.mp4"
+                _image_to_scene_clip(ffmpeg, s, clip, sec=per_scene_seconds)
+                scene_video_inputs.append(clip)
+            else:
+                scene_video_inputs.append(s)
 
-    concat_video = run_dir / f"page4_concat_{manifest['item_id']}.mp4"
-    _run(
-        [
-            str(ffmpeg),
-            "-y",
-            "-f",
-            "concat",
-            "-safe",
-            "0",
-            "-i",
-            str(concat_list),
-            "-an",
-            "-vf",
-            "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=30,format=yuv420p",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "veryfast",
-            "-crf",
-            "20",
-            str(concat_video),
-        ]
-    )
+        concat_list = run_dir / "scene_concat_list.txt"
+        concat_lines: list[str] = []
+        for p in scene_video_inputs:
+            safe = _ffmpeg_file_path(p).replace("'", "''")
+            concat_lines.append(f"file '{safe}'\n")
+        concat_list.write_text("".join(concat_lines), encoding="utf-8")
+
+        concat_video = run_dir / f"page4_concat_{manifest['item_id']}.mp4"
+        _run(
+            [
+                str(ffmpeg),
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(concat_list),
+                "-an",
+                "-vf",
+                "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=30,format=yuv420p",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "20",
+                str(concat_video),
+            ]
+        )
 
     music_dir = _local_path(args.music_dir)
     music_files = sorted([p for p in music_dir.glob("*") if p.suffix.lower() in {".mp3", ".m4a", ".wav", ".aac"}])
     bg_music = music_files[0] if (args.use_music and music_files) else None
+    music_volume = max(0.0, min(1.0, float(args.music_volume)))
 
     final_video = run_dir / f"page4_{manifest['item_id']}_final_singlepass_720x1280.mp4"
     if bg_music and bg_music.exists():
@@ -346,7 +384,7 @@ def main() -> None:
                 "-i",
                 str(voice_mp3),
                 "-filter_complex",
-                "[0:a]volume=0.12[a0];[1:a]volume=1.0[a1];[a0][a1]amix=inputs=2:duration=longest:dropout_transition=2[aout]",
+                f"[0:a]volume={music_volume:.4f}[a0];[1:a]volume=1.0[a1];[a0][a1]amix=inputs=2:duration=shortest:dropout_transition=2:normalize=0[aout]",
                 "-map",
                 "[aout]",
                 "-vn",
@@ -364,7 +402,6 @@ def main() -> None:
 
     # Retiming: make scene motion fit narration duration (audio remains untouched).
     concat_seconds = _probe_seconds(ffprobe, concat_video)
-    voice_seconds = _probe_seconds(ffprobe, voice_mp3)
     timing_video = concat_video
     if concat_seconds > 0.01 and voice_seconds > 0.01:
         speed_ratio = voice_seconds / concat_seconds
@@ -403,6 +440,11 @@ def main() -> None:
             logo_path = fallback_logo
     use_logo = logo_path.exists()
     logo_opacity = max(0.0, min(1.0, float(args.logo_opacity)))
+    # Keep scene art colorful, but calm the caption zone so narration text wins attention.
+    visual_base = (
+        "eq=contrast=0.96:saturation=0.95:brightness=-0.015,"
+        "drawbox=x=0:y=ih*0.685:w=iw:h=ih*0.175:color=black@0.30:t=fill"
+    )
 
     if use_logo:
         logo_w_expr = f"iw*{float(args.logo_w_ratio):.10f}"
@@ -410,12 +452,12 @@ def main() -> None:
         logo_y_expr = f"H*{float(args.logo_y_ratio):.10f}"
         filter_chain = (
             f"[1:v]scale={logo_w_expr}:-1,format=rgba,colorchannelmixer=aa={logo_opacity}[lg];"
-            f"[0:v]subtitles='{ass_ff}'[vc];"
+            f"[0:v]{visual_base},subtitles='{ass_ff}'[vc];"
             f"[vc][lg]overlay=x={logo_x_expr}:y={logo_y_expr}:format=auto[vout]"
         )
         map_video = "[vout]"
     else:
-        filter_chain = f"[0:v]subtitles='{ass_ff}'[vout]"
+        filter_chain = f"[0:v]{visual_base},subtitles='{ass_ff}'[vout]"
         map_video = "[vout]"
 
     _run(
@@ -459,6 +501,8 @@ def main() -> None:
         "scene_video_inputs": [str(x) for x in scene_video_inputs],
         "voice_mp3": str(voice_mp3),
         "concat_video": str(concat_video),
+        "merged_story_strip": str(merged_story_strip) if merged_story_strip else "",
+        "render_flow": "merged_story_strip_pan" if merged_story_strip else "concat_fallback",
         "final_video": str(final_video),
         "final_seconds": _probe_seconds(ffprobe, final_video),
         "caption_ass": str(caption_ass),

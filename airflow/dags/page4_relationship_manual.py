@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -18,7 +18,7 @@ if str(AIRFLOW_ROOT) not in sys.path:
     sys.path.insert(0, str(AIRFLOW_ROOT))
 
 from lib.common import build_run_root, build_slot_dir, get_page_airflow_defaults, get_page_airflow_schedule, get_page_runtime, parse_target_requests, send_batch_start, send_batch_summary  # noqa: E402
-from lib.page_flows import (  # noqa: E402
+from lib.flows.page4_relationship import (  # noqa: E402
     page4_generate_content,
     page4_grok_scene_images,
     page4_render_video,
@@ -101,8 +101,8 @@ def build_dag():
 
     generate_content = task(task_id="generate_content")(page4_generate_content)
     speechma_voice = task(task_id="speechma_voice")(page4_speechma_voice)
-    grok_scene_images = task(task_id="grok_scene_images")(page4_grok_scene_images)
-    render_video = task(task_id="render_video")(page4_render_video)
+    grok_scene_images = task(task_id="grok_triptych_images")(page4_grok_scene_images)
+    render_video = task(task_id="render_panning_reel")(page4_render_video)
     upload_schedule = task(task_id="upload_schedule")(page4_upload_slot)
     telegram_notify = task(task_id="telegram_notify")(page4_telegram_slot)
 
@@ -129,3 +129,4 @@ def build_dag():
 
 
 dag = build_dag()
+

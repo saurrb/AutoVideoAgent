@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -34,6 +35,13 @@ def send_telegram(message: str) -> bool:
         return False
 
 
+def _clean_error(value: str, *, limit: int = 500) -> str:
+    text = str(value or "")
+    text = re.sub(r"\x1b\[[0-9;]*m", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:limit]
+
+
 def reel_status_message(
     *,
     page_key: str,
@@ -48,21 +56,23 @@ def reel_status_message(
 ) -> str:
     status_text = str(status or "").strip().lower()
     label = (page_label or page_key.replace("_", " ").title()).strip()
-    title = "[SCHEDULED] Reel Scheduled" if status_text in {"scheduled", "complete"} else "[FAILED] Reel Failed"
+    is_success = status_text in {"scheduled", "complete"}
+    icon = "✅" if is_success else "❌"
+    title = f"{icon} Reel Scheduled" if is_success else f"{icon} Reel Failed"
     lines = [
         title,
         "",
-        f"Page: {label}",
-        f"Slot: {slot}",
-        f"Publish Time: {scheduled_for}",
-        f"Status: {status_text.upper() or 'UNKNOWN'}",
+        f"📄 Page: {label}",
+        f"🕒 Slot: {slot}",
+        f"📅 Publish Time: {scheduled_for}",
+        f"📌 Status: {status_text.upper() or 'UNKNOWN'}",
     ]
     if status_text not in {"scheduled", "complete"} and failed_stage:
-        lines.append(f"Failed Stage: {failed_stage}")
+        lines.append(f"🧩 Failed Stage: {failed_stage}")
     if video:
-        lines.extend(["", f"Video: {video}"])
+        lines.extend(["", f"🎬 Video: {video}"])
     if run_folder:
-        lines.append(f"Run Folder: {run_folder}")
+        lines.append(f"📁 Run Folder: {run_folder}")
     if error:
-        lines.extend(["", f"Reason: {error[:500]}"])
+        lines.extend(["", f"🔎 Reason: {_clean_error(error)}"])
     return "\n".join(lines)

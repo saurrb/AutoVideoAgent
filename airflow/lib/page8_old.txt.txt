@@ -1,0 +1,293 @@
+
+# ---------------------------------------------------------------------------
+# Page 8: Funny Universe animated cartoon comics
+# ---------------------------------------------------------------------------
+
+PAGE8_ROOT = PROJECT_ROOT / "pages" / "page8_funny_universe"
+PAGE8_CHARACTERS_PATH = PAGE8_ROOT / "data" / "characters.json"
+PAGE8_ROTATION_PATH = PAGE8_ROOT / "data" / "character_rotation.json"
+PAGE8_STYLE_RULES_PATH = PAGE8_ROOT / "assets" / "style" / "grok_video_style_rules.txt"
+
+
+def _page8_load_characters() -> list[dict[str, Any]]:
+    payload = json.loads(PAGE8_CHARACTERS_PATH.read_text(encoding="utf-8-sig"))
+    characters = payload.get("characters")
+    if not isinstance(characters, list) or not characters:
+        raise RuntimeError(f"Page8 character lock file has no characters: {PAGE8_CHARACTERS_PATH}")
+    return [c for c in characters if isinstance(c, dict) and c.get("character_name")]
+
+
+def _page8_next_character() -> dict[str, Any]:
+    characters = _page8_load_characters()
+    state = {"next_index": 0}
+    if PAGE8_ROTATION_PATH.exists():
+        try:
+            loaded = json.loads(PAGE8_ROTATION_PATH.read_text(encoding="utf-8-sig"))
+            if isinstance(loaded, dict):
+                state.update(loaded)
+        except Exception:
+            pass
+    next_index = int(state.get("next_index") or 0) % len(characters)
+    chosen = characters[next_index]
+    new_state = {
+        "next_index": (next_index + 1) % len(characters),
+        "last_character": chosen["character_name"],
+        "updated_at": datetime.utcnow().isoformat(),
+    }
+    write_json(PAGE8_ROTATION_PATH, new_state)
+    return {**chosen, "rotation_index": next_index}
+
+
+def _page8_content_prompt(request: dict[str, Any], character: dict[str, Any]) -> str:
+    seed = f"{request.get('target_date')} {request.get('slot')} {random.randint(1000, 9999)}"
+    return f"""
+You are creating one 10-second animated cartoon comic for a Facebook page called FUNNY UNIVERSE.
+
+Seed: {seed}
+Locked main character for this run:
+- Name: {character.get("character_name")}
+- Visual identity: {character.get("fixed_visuals")}
+- Personality: {character.get("personality")}
+- Speech DNA: {character.get("speech_dna")}
+- Prompt anchor: {character.get("prompt_anchor")}
+- Example lines: {", ".join(character.get("speech_examples") or [])}
+
+Other characters may appear, but exactly one locked character from the list is featured: {character.get("character_name")}.
+
+Return ONLY valid JSON with this exact shape:
+{{
+  "topic": "short funny topic",
+  "hook": "short first visual moment",
+  "joke_setup": "one sentence",
+  "dialogue": [
+    {{"speaker": "other character", "line": "short speech bubble"}},
+    {{"speaker": "{character.get("character_name")}", "line": "short punchline speech bubble"}}
+  ],
+  "caption": "short Facebook caption with a comment prompt",
+  "hashtags": ["#FunnyUniverse", "#CartoonComedy"],
+  "video_prompt": "single complete Grok video prompt for a 10-second 9:16 animated cartoon scene"
+}}
+
+CONTENT RULES:
+- The joke must be clean, family-friendly, instantly understandable, and funny in 2 seconds.
+- Keep dialogue to 2 or 3 speech bubbles total.
+- Speech bubbles must be very short: 3 to 9 words each.
+- No narration, no captions in the video, no text outside speech bubbles.
+- The locked character must speak in their fixed voice.
+- Supporting characters can be any funny cartoon person, animal, robot, alien, or object.
+- Do not repeat the sample jokes from the character profile.
+
+VIDEO PROMPT RULES:
+- Include the locked character's full visual identity.
+- Describe one simple setting, one supporting character, the speech bubbles, and 2D motion across 10 seconds.
+- Style must be extremely simple cartoon, thick black outlines, flat colors, cute expressive faces, soft bright background, Facebook meme aesthetic.
+- Mention: no watermark, no logo, no captions, no text except speech bubbles.
+""".strip()
+
+
+def _page8_normalize_content(payload: dict[str, Any], character: dict[str, Any]) -> dict[str, Any]:
+    dialogue_raw = payload.get("dialogue")
+    if not isinstance(dialogue_raw, list):
+        dialogue_raw = []
+    dialogue: list[dict[str, str]] = []
+    for item in dialogue_raw[:3]:
+        if not isinstance(item, dict):
+            continue
+        speaker = _page5_repair_text(str(item.get("speaker") or "").strip())[:80]
+        line = _page5_repair_text(str(item.get("line") or "").strip())[:90]
+        if speaker and line:
+            dialogue.append({"speaker": speaker, "line": line})
+    if len(dialogue) < 2:
+        raise RuntimeError("Page8 needs at least 2 dialogue bubbles")
+    if not any(str(row.get("speaker", "")).lower() == str(character["character_name"]).lower() for row in dialogue):
+        raise RuntimeError(f"Page8 dialogue must include {character['character_name']}")
+    hashtags = _page5_sanitize_list(payload.get("hashtags"), limit=8)
+    hashtags = [tag if tag.startswith("#") else f"#{tag.lstrip('#')}" for tag in hashtags]
+    if not hashtags:
+        hashtags = ["#FunnyUniverse", "#CartoonComedy", "#FunnyReels", "#CleanComedy"]
+    video_prompt = _page5_repair_text(str(payload.get("video_prompt") or "").strip())
+    if len(video_prompt.split()) < 45:
+        raise RuntimeError("Page8 video_prompt is too short")
+    return {
+        "character": character,
+        "topic": _page5_repair_text(str(payload.get("topic") or "funny cartoon logic").strip())[:120],
+        "hook": _page5_repair_text(str(payload.get("hook") or "").strip())[:160],
+        "joke_setup": _page5_repair_text(str(payload.get("joke_setup") or "").strip())[:240],
+        "dialogue": dialogue,
+        "caption": _page5_repair_text(str(payload.get("caption") or "Which character should appear next?").strip())[:700],
+        "hashtags": hashtags,
+        "video_prompt": video_prompt,
+    }
+
+
+@_stage_guard("generate_comic_content")
+def page8_generate_comic_content(request: dict[str, Any]) -> dict[str, Any]:
+    page_key = str(request["page_key"])
+    _, slot_dir, asset_id = _slot_meta(request)
+    character = _page8_next_character()
+    prompt = _page8_content_prompt(request, character)
+    raw = _page5_run_grok_text(prompt)
+    content = _page8_normalize_content(_page5_extract_json(raw), character)
+    item_id = int(datetime.now().strftime("%H%M%S"))
+    content_path = slot_dir / f"page8_content_{item_id}.json"
+    prompt_path = slot_dir / f"page8_content_prompt_{item_id}.txt"
+    raw_path = slot_dir / f"page8_content_raw_{item_id}.txt"
+    scene_prompt_path = slot_dir / f"page8_video_prompt_{item_id}.txt"
+    scene_prompt_path.write_text(content["video_prompt"].strip() + "\n", encoding="utf-8")
+    prompt_path.write_text(prompt, encoding="utf-8")
+    raw_path.write_text(raw, encoding="utf-8")
+    write_json(content_path, content)
+    caption_text = (content["caption"].strip() + "\n\n" + " ".join(content["hashtags"])).strip()
+    payload = {
+        "request": request,
+        "page_key": page_key,
+        "asset_id": asset_id,
+        "slot_dir": str(slot_dir),
+        "item_id": item_id,
+        "content": content,
+        "content_json": str(content_path),
+        "content_prompt_path": str(prompt_path),
+        "content_raw_path": str(raw_path),
+        "video_prompt_txt": str(scene_prompt_path),
+        "caption_text": caption_text,
+    }
+    write_json(slot_dir / "01_generate_comic_content.json", payload)
+    return payload
+
+
+@_stage_guard("grok_animated_video")
+def page8_grok_animated_video(content_data: dict[str, Any]) -> dict[str, Any]:
+    slot_dir = Path(content_data["slot_dir"])
+    grok_output_dir = slot_dir / "grok_animated_video"
+    grok_output_dir.mkdir(parents=True, exist_ok=True)
+    run_checked(
+        [
+            sys.executable,
+            str(PROJECT_ROOT / "pages" / "automation_tools" / "grok_video_cli" / "grok_cli_scene_generate.py"),
+            "--prompt-file",
+            str(content_data["video_prompt_txt"]),
+            "--output-dir",
+            str(grok_output_dir),
+            "--duration-seconds",
+            "10",
+            "--style-rules-file",
+            str(PAGE8_STYLE_RULES_PATH),
+            "--grok-exe",
+            str(resolve_grok_exe()),
+            "--sessions-dir",
+            str(resolve_grok_exe().parents[1] / "sessions"),
+            "--max-scene-seconds",
+            "720",
+        ],
+        timeout=900,
+    )
+    done = read_json(grok_output_dir / "grok_outputs.done.json")
+    files = done.get("files") if isinstance(done.get("files"), list) else []
+    if not files:
+        raise RuntimeError("Page8 Grok video did not return an MP4")
+    payload = {**content_data, "grok_output_dir": str(grok_output_dir), "grok_done": done, "grok_video": str(files[0])}
+    write_json(slot_dir / "02_grok_animated_video.json", payload)
+    return payload
+
+
+@_stage_guard("render_video")
+def page8_render_video(video_data: dict[str, Any]) -> dict[str, Any]:
+    slot_dir = Path(video_data["slot_dir"])
+    request = video_data["request"]
+    ffmpeg = _default_ffmpeg(PROJECT_ROOT)
+    source_video = Path(video_data["grok_video"])
+    final_mp4 = slot_dir / f"page8_{request['target_date'].replace('-', '')}_{request['slot'].replace(':', '')}_final_720x1280.mp4"
+    run_checked(
+        [
+            str(ffmpeg),
+            "-y",
+            "-i",
+            _media_arg(source_video),
+            "-vf",
+            "scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,setsar=1",
+            "-t",
+            "10",
+            "-r",
+            "30",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-shortest",
+            _media_arg(final_mp4),
+        ],
+        timeout=300,
+    )
+    if not final_mp4.exists() or final_mp4.stat().st_size < 100_000:
+        raise RuntimeError(f"Page8 render failed to create a valid MP4: {final_mp4}")
+    manifest = {
+        "page": video_data["page_key"],
+        "item_id": video_data["item_id"],
+        "character": video_data["content"]["character"]["character_name"],
+        "topic": video_data["content"].get("topic", ""),
+        "caption": video_data["caption_text"],
+        "source_video": str(source_video),
+        "output_mp4": str(final_mp4),
+        "created_at": datetime.utcnow().isoformat(),
+        "run_dir": str(slot_dir),
+    }
+    manifest_path = slot_dir / f"page8_{video_data['item_id']}.manifest.json"
+    write_json(manifest_path, manifest)
+    payload = {**video_data, "video_path": str(final_mp4), "manifest_path": str(manifest_path)}
+    write_json(slot_dir / "03_render_video.json", payload)
+    return payload
+
+
+@_stage_guard("upload_schedule")
+def page8_upload_slot(rendered: dict[str, Any]) -> dict[str, Any]:
+    request = rendered["request"]
+    slot_dir = Path(rendered["slot_dir"])
+    if bool(request.get("skip_upload")):
+        payload = {**rendered, "upload": {"skipped": True, "reason": "skip_upload request flag"}}
+        write_json(slot_dir / "04_upload.json", payload)
+        return payload
+    upload = run_meta_upload(
+        page_key=rendered["page_key"],
+        asset_id=rendered["asset_id"],
+        video=Path(rendered["video_path"]),
+        caption=rendered["caption_text"],
+        when_iso=request["target_iso"],
+    )
+    payload = {**rendered, "upload": upload}
+    write_json(slot_dir / "04_upload.json", payload)
+    return payload
+
+
+def page8_telegram_slot(uploaded: dict[str, Any]) -> dict[str, Any]:
+    request = uploaded["request"]
+    slot_dir = Path(uploaded["slot_dir"])
+    if _is_failed_payload(uploaded):
+        send_status(
+            uploaded["page_key"],
+            request["slot"],
+            request["target_iso"],
+            "failed",
+            video=uploaded.get("video_path", ""),
+            error=f"{uploaded.get('failed_stage', 'unknown')}: {uploaded.get('error', '')}",
+            run_folder=str(slot_dir),
+            failed_stage=str(uploaded.get("failed_stage", "unknown")),
+        )
+        payload = {**uploaded, "telegram": "sent"}
+        write_json(slot_dir / "05_telegram.json", payload)
+        _write_slot_complete(request, payload, "failed")
+        return payload
+
+    send_status(
+        uploaded["page_key"],
+        request["slot"],
+        request["target_iso"],
+        "scheduled",
+        video=uploaded["video_path"],
+        run_folder=str(slot_dir),
+    )
+    payload = {**uploaded, "telegram": "sent"}
+    write_json(slot_dir / "05_telegram.json", payload)
+    _write_slot_complete(request, payload, "complete")
+    return payload
